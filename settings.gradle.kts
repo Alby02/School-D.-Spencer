@@ -1,2 +1,2 @@
-rootProject.name = "MacineManagerRestFull"
+rootProject.name = "MachineManagerRestFull"
 

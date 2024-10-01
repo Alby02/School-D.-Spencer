@@ -1,0 +1,22 @@
+
+services:
+    mqtt:
+        image: eclipse-mosquitto:latest
+        container_name: mqtt
+        ports:
+            - "1883:1883"
+        networks:
+            - mqtt-network
+        volumes:
+            - mosquitto-data:/mosquitto/data
+            - mosquitto-log:/mosquitto/log
+            - mosquitto-conf:/mosquitto/config
+
+networks:
+    mqtt-network:
+        driver: bridge
+
+volumes:
+    mosquitto-data:
+    mosquitto-log:
+    mosquitto-conf:
