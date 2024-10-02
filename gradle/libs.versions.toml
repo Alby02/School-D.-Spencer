@@ -1,10 +1,10 @@
 [versions]
 
-spark = "2.9.4"
+spark = "3.0"
 junitBom = "5.9.1"
 
 [libraries]
 
-spark-core = {group = "com.sparkjava", name = "spark-core", version.ref = "spark"}
+spark-core = {group = "org.zoomba-lang", name = "spark-core", version.ref = "spark"}
 junit-jupiter = {group = "org.junit.jupiter", name = "junit-jupiter"}
 junit-bom = {group = "org.junit", name = "junit-bom", version.ref = "junitBom"}
