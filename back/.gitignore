@@ -1,0 +1,5 @@
+# Ignore the secrets
+secrets/
+mosquitto/data
+mosquitto/log
+.env

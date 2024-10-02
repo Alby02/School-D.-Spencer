@@ -1,6 +1,6 @@
 
 services:
-    mqtt:
+    eclipse-mosquitto:
         image: eclipse-mosquitto:latest
         container_name: mqtt
         ports:
@@ -8,15 +8,29 @@ services:
         networks:
             - mqtt-network
         volumes:
-            - mosquitto-data:/mosquitto/data
-            - mosquitto-log:/mosquitto/log
-            - mosquitto-conf:/mosquitto/config
+            - ./mosquitto/data:/mosquitto/data
+            - ./mosquitto/log:/mosquitto/log
+            - ./mosquitto/conf:/mosquitto/config
+
+    postgres:
+        image: postgres:latest
+        container_name: postgres-api
+        environment:
+            - POSTGRES_DB=${POSTGRES_DB}
+            - POSTGRES_USER=${POSTGRES_USER}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD} #/run/secrets/postgres_password
+        volumes:
+            - postgres-data2:/var/lib/postgresql/data
+        ports:
+            - "5432:5432"
+        networks:
+            - postgres-network
 
 networks:
     mqtt-network:
         driver: bridge
+    postgres-network:
+        driver: bridge
 
 volumes:
-    mosquitto-data:
-    mosquitto-log:
-    mosquitto-conf:
+    postgres-data2:
