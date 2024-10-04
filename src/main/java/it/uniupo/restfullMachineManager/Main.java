@@ -1,71 +1,93 @@
 package it.uniupo.restfullMachineManager;
 
+import java.sql.*;
 import com.google.gson.Gson;
 import java.util.HashMap;
 import java.util.Map;
 import static spark.Spark.*;
+import io.github.cdimascio.dotenv.Dotenv;
 
 public class Main {
 
-    private static final Map<String, Double> beveragePrices = new HashMap<>();
-    private static final Map<String, Integer> cialdeDisponibili = new HashMap<>();
+    private static final Dotenv dotenv = Dotenv.configure().directory("./back/").load();
+    private static final String DB_URL = "jdbc:postgresql://postgres-network:5432/" + dotenv.get("POSTGRES_DB");
+    private static final String USER = dotenv.get("POSTGRES_USER");
+    private static final String PASS = dotenv.get("POSTGRES_PASSWORD");
+    private static final Gson gson = new Gson();
 
     public static void main(String[] args) {
         port(8080);
-        initBeverageData();
 
         get("/bevande", (req, res) -> {
             res.type("application/json");
-            return new Gson().toJson(beveragePrices);
+            Map<String, Double> bevande = new HashMap<>();
+            try (Connection conn = getConnection();
+                 Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery("SELECT nome, prezzo FROM bevande")) {
+
+                while (rs.next()) {
+                    bevande.put(rs.getString("nome"), rs.getDouble("prezzo"));
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+            return new Gson().toJson(bevande);
         });
 
         get("/cialde", (req, res) -> {
             res.type("application/json");
+            Map<String, Integer> cialdeDisponibili = new HashMap<>();
+            try (Connection conn = getConnection();
+                 Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery("SELECT tipo, quantita FROM cialde")) {
+
+                while (rs.next()) {
+                    cialdeDisponibili.put(rs.getString("tipo"), rs.getInt("quantita"));
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
             return new Gson().toJson(cialdeDisponibili);
         });
 
-        post("/cialde/update", (req, res) -> {
-            String beverage = req.queryParams("beverage");
-            int quantity = Integer.parseInt(req.queryParams("quantity"));
+        post("/ricarica", (req, res) -> {
+            String json = req.body();
+            Map<String, Integer> ricarica = gson.fromJson(json, Map.class);
+            try (Connection conn = getConnection();
+                 PreparedStatement pstmt = conn.prepareStatement("UPDATE cialde SET quantita = ? WHERE tipo = ?")) {
 
-            if (cialdeDisponibili.containsKey(beverage)) {
-                cialdeDisponibili.put(beverage, cialdeDisponibili.get(beverage) + quantity);
-                return "Quantità di cialde aggiornata per " + beverage;
-            } else {
-                res.status(404);
-                return "Bevanda non trovata";
-            }
-        });
-
-        post("/eroga", (req, res) -> {
-            String beverage = req.queryParams("beverage");
-
-            if (cialdeDisponibili.containsKey(beverage)) {
-                int available = cialdeDisponibili.get(beverage);
-                if (available > 0) {
-                    cialdeDisponibili.put(beverage, available - 1);
-                    return "Bevanda " + beverage + " erogata! Quantità di cialde rimanenti: " + (available - 1);
-                } else {
-                    res.status(400);
-                    return "Cialde non disponibili per " + beverage;
+                for (Map.Entry<String, Integer> entry : ricarica.entrySet()) {
+                    pstmt.setInt(1, entry.getValue());
+                    pstmt.setString(2, entry.getKey());
+                    pstmt.executeUpdate();
                 }
-            } else {
-                res.status(404);
-                return "Bevanda non trovata";
+                return gson.toJson("Cialde ricaricate con successo");
+            } catch (SQLException e) {
+                e.printStackTrace();
+                return gson.toJson("Errore durante la ricarica delle cialde");
             }
         });
 
+        post("/utilizzo", (req, res) -> {
+            String json = req.body();
+            Map<String, Integer> utilizzo = gson.fromJson(json, Map.class);
+            try (Connection conn = getConnection();
+                 PreparedStatement pstmt = conn.prepareStatement("UPDATE cialde SET quantita = quantita - ? WHERE tipo = ?")) {
+
+                for (Map.Entry<String, Integer> entry : utilizzo.entrySet()) {
+                    pstmt.setInt(1, entry.getValue());
+                    pstmt.setString(2, entry.getKey());
+                    pstmt.executeUpdate();
+                }
+                return gson.toJson("Cialde utilizzate con successo");
+            } catch (SQLException e) {
+                e.printStackTrace();
+                return gson.toJson("Errore durante l'utilizzo delle cialde");
+            }
+        });
     }
 
-    private static void initBeverageData() {
-        // Bevande e prezzi
-        beveragePrices.put("Caffè", 1.0);
-        beveragePrices.put("Cappuccino", 1.5);
-        beveragePrices.put("Tè", 0.8);
-
-        // Disponibilità iniziale di cialde
-        cialdeDisponibili.put("Caffè", 10);
-        cialdeDisponibili.put("Cappuccino", 5);
-        cialdeDisponibili.put("Tè", 7);
+    private static Connection getConnection() throws SQLException {
+        return DriverManager.getConnection(DB_URL, USER, PASS);
     }
 }
