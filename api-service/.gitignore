@@ -1,11 +1,7 @@
-
-.env
-mosquitto/data
-mosquitto/log
-postgres/*/data
+.gradle
+build/
 
 ### IntelliJ IDEA ###
-.idea
 .idea/modules.xml
 .idea/jarRepositories.xml
 .idea/compiler.xml

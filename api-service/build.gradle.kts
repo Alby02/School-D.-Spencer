@@ -18,7 +18,6 @@ dependencies {
     testImplementation(libs.junit.jupiter)
     implementation(libs.spark.core)
     implementation(libs.gson)
-    implementation(libs.dotenv)
     implementation(libs.postgresql)
 }
 
