@@ -4,7 +4,7 @@ import java.sql.*;
 import com.google.gson.Gson;
 import java.util.HashMap;
 import java.util.Map;
-import static spark.Spark.*;
+import spark.Spark;
 
 public class Main {
 
@@ -12,14 +12,19 @@ public class Main {
     private static final Gson gson = new Gson();
 
     public static void main(String[] args) throws SQLException {
-        port(8888);
+        Spark.port(80);
 
-        Configs configs = new Configs("config.properties");
-        String DB_URL = "jdbc:postgresql://"+ configs.getPostgresUrl() +":"+ configs.getPostgresPort() +"/" + configs.getPostgresDatabase();
+        String postgresUrl = System.getenv("POSTGRES_URL");
+        String postgresDatabase = System.getenv("POSTGRES_DATABASE");
+        String postgresUser = System.getenv("POSTGRES_USER");
+        String postgresPassword = System.getenv("POSTGRES_PASSWORD");
 
-        Connection databaseConnection = DriverManager.getConnection(DB_URL, configs.getPostgresUser(), configs.getPostgresPassword());
+        Connection databaseConnection = DriverManager.getConnection(
+                "jdbc:postgresql://" + postgresUrl + "/" + postgresDatabase,
+                postgresUser, postgresPassword
+        );
 
-        get("/bevande", (req, res) -> {
+        Spark.get("/bevande", (req, res) -> {
             res.type("application/json");
             Map<String, Double> bevande = new HashMap<>();
 
@@ -33,7 +38,7 @@ public class Main {
             return new Gson().toJson(bevande);
         });
 
-        get("/cialde", (req, res) -> {
+        Spark.get("/cialde", (req, res) -> {
             res.type("application/json");
             Map<String, Integer> cialdeDisponibili = new HashMap<>();
 
@@ -46,7 +51,7 @@ public class Main {
             return new Gson().toJson(cialdeDisponibili);
         });
 
-        post("/ricarica", (req, res) -> {
+        Spark.post("/ricarica", (req, res) -> {
             String json = req.body();
             Map<String, Integer> ricarica = gson.fromJson(json, Map.class);
 
@@ -60,7 +65,7 @@ public class Main {
             return gson.toJson("Cialde ricaricate con successo");
         });
 
-        post("/utilizzo", (req, res) -> {
+        Spark.post("/utilizzo", (req, res) -> {
             String json = req.body();
             Map<String, Integer> utilizzo = gson.fromJson(json, Map.class);
 
