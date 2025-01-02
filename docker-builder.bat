@@ -1,0 +1,14 @@
+cd ./assistance
+call docker-builder.bat
+cd ..
+cd ./bank
+call docker-builder.bat
+cd ..
+cd ./issuer
+call docker-builder.bat
+cd ..
+cd ./keypad
+call docker-builder.bat
+cd ..
+cd ./manager
+call docker-builder.bat

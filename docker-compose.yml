@@ -41,6 +41,66 @@ services:
             - mosquitto-local
             - postgres-local
 
+    assistance-local:
+        image: assistance-local:latest
+        container_name: assistance-local
+        build:
+            context: ./assistance
+            dockerfile: Dockerfile
+        expose:
+            - 1883
+        networks:
+            - mqtt-local-network
+            - postgres-local-network
+        depends_on:
+            - mosquitto-local
+            - postgres-local
+
+    bank-local:
+        image: bank-local:latest
+        container_name: bank-local
+        build:
+            context: ./bank
+            dockerfile: Dockerfile
+        expose:
+            - 1883
+        networks:
+            - mqtt-local-network
+            - postgres-local-network
+        depends_on:
+            - mosquitto-local
+            - postgres-local
+
+    issuer-local:
+        image: issuer-local:latest
+        container_name: issuer-local
+        build:
+            context: ./issuer
+            dockerfile: Dockerfile
+        expose:
+            - 1883
+        networks:
+            - mqtt-local-network
+            - postgres-local-network
+        depends_on:
+            - mosquitto-local
+            - postgres-local
+
+    keypad-local:
+        image: keypad-local:latest
+        container_name: keypad-local
+        build:
+            context: ./keypad
+            dockerfile: Dockerfile
+        expose:
+            - 1883
+        networks:
+            - mqtt-local-network
+            - postgres-local-network
+        depends_on:
+            - mosquitto-local
+            - postgres-local
+
 
 networks:
     mqtt-local-network:

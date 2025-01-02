@@ -29,4 +29,4 @@ RUN ./gradlew installDist
 #ENV POSTGRES_PASSWORD=postgres
 
 # Run the application
-CMD ["build/install/Manager/bin/Manager"]
+CMD ["build/install/Issuer/bin/Issuer"]

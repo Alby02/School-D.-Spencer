@@ -1,2 +1,2 @@
-rootProject.name = "School-D.-Spencer-BiBoBip"
+rootProject.name = "Manager"
 
