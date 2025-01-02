@@ -29,4 +29,4 @@ RUN ./gradlew installDist
 #ENV POSTGRES_PASSWORD=postgres
 
 # Run the application
-CMD ["build/install/MachineManagerRestFull/bin/MachineManagerRestFull"]
+CMD ["build/install/School-D.-Spencer-BiBoBip/bin/School-D.-Spencer-BiBoBip"]

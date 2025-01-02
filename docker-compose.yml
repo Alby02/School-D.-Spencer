@@ -26,6 +26,21 @@ services:
         networks:
             - postgres-local-network
 
+    manager-local:
+        image: manager-local:latest
+        container_name: manager-local
+        build:
+            context: ./manager
+            dockerfile: Dockerfile
+        expose:
+            - 1883
+        networks:
+            - mqtt-local-network
+            - postgres-local-network
+        depends_on:
+            - mosquitto-local
+            - postgres-local
+
 
 networks:
     mqtt-local-network:
