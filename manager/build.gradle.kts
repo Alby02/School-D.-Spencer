@@ -1,5 +1,5 @@
 plugins {
-    id("java")
+    application
 }
 
 group = "it.uniupo.macchinetta"
@@ -9,9 +9,14 @@ repositories {
     mavenCentral()
 }
 
+application {
+    mainClass = "it.uniupo.macchinetta.Main"
+}
+
 dependencies {
-    testImplementation(platform("org.junit:junit-bom:5.10.0"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit.jupiter)
+    implementation(libs.postgresql)
 }
 
 tasks.test {
