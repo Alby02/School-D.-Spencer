@@ -17,6 +17,7 @@ dependencies {
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     implementation(libs.postgresql)
+    implementation(libs.mqtt)
 }
 
 tasks.test {

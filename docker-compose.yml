@@ -100,6 +100,12 @@ services:
         depends_on:
             - mosquitto-local
             - postgres-local
+        environment:
+            - POSTGRES_DB=${POSTGRES_DB_LOCAL}
+            - POSTGRES_USER=${POSTGRES_USER_LOCAL}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_LOCAL}
+            - POSTGRES_URL=postgres-local:5432
+            - MQTT_URL=mosquitto-local:1883
 
 
 networks:
