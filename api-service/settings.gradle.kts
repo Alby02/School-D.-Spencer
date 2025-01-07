@@ -1,2 +1,2 @@
-rootProject.name = "MachineManagerRestFull"
+rootProject.name = "ApiService"
 

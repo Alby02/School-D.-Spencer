@@ -23,18 +23,21 @@ services:
             - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_API} #/run/secrets/postgres_password
         volumes:
             - ./postgres/api/data:/var/lib/postgresql/data
+        ports:
+            - "5432:5432" #for testing purposes
         expose:
             - "5432"
         networks:
             - postgres-api-network
 
     java-api:
-        container_name: java-api
+        container_name: api-service
+        image: api-service:latest
         build:
             context: ./api-service
             dockerfile: Dockerfile
         environment:
-            - POSTGRES_URL=postgres-api:5432
+            - POSTGRES_URL=${POSTGRES_URL_API}
             - POSTGRES_DATABASE=${POSTGRES_DB_API}
             - POSTGRES_USER=${POSTGRES_USER_API}
             - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_API}
@@ -51,16 +54,15 @@ services:
         image: postgres:latest
         container_name: postgres-keycloak
         environment:
-            - POSTGRES_DB=${POSTGRES_DB_KEYCLOAK}
-            - POSTGRES_USER=${POSTGRES_USER_KEYCLOAK}
-            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_KEYCLOAK} #/run/secrets/postgres_password
+            - POSTGRES_DB=${KC_DB_URL_DATABASE}
+            - POSTGRES_USER=${KC_DB_USERNAME}
+            - POSTGRES_PASSWORD=${KC_DB_PASSWORD}
         volumes:
             - ./postgres/keycloak/data:/var/lib/postgresql/data
         expose:
             - "5432"  # Expose to services inside the network
         networks:
             - keycloak-postgres-network  # Connect PostgreSQL to Keycloak
-            - pgadmin-postgres-network   # Connect PostgreSQL to pgAdmin
 
     keycloak:
         image: keycloak/keycloak:latest
@@ -70,9 +72,9 @@ services:
             - KC_DB_URL_HOST=${KC_DB_URL_HOST}
             - KC_DB_URL_DATABASE=${KC_DB_URL_DATABASE}
             - KC_DB_USERNAME=${KC_DB_USERNAME}
+            - KC_DB_PASSWORD=${KC_DB_PASSWORD}
             - KEYCLOAK_ADMIN=${KC_ADMIN}
-            - KC_DB_PASSWORD=${KC_DB_PASSWORD} #/run/secrets/postgres_password
-            - KEYCLOAK_ADMIN_PASSWORD=${KC_ADMIN_PASSWORD} #/run/secrets/keycloak_admin_password
+            - KEYCLOAK_ADMIN_PASSWORD=${KC_ADMIN_PASSWORD}
         ports:
             - "8080:8080"
         networks:
@@ -80,21 +82,6 @@ services:
         depends_on:
             - postgres-keycloak
         command: start-dev
-
-    pgadmin:
-        image: dpage/pgadmin4:latest
-        container_name: pgadmin
-        environment:
-            - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
-            - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
-        ports:
-            - "5080:80"  # Expose pgAdmin on this port for external access
-        networks:
-            - postgres-api-network
-            - pgadmin-postgres-network   # Connect PostgreSQL to pgAdmin
-        depends_on:
-            - postgres-api
-            - postgres-keycloak
 
 
 networks:
@@ -104,5 +91,3 @@ networks:
         driver: bridge
     keycloak-postgres-network:
         driver: bridge  # Network for Keycloak and PostgreSQL
-    pgadmin-postgres-network:
-        driver: bridge  # Network for pgAdmin and PostgreSQL
