@@ -19,14 +19,5 @@ COPY src src
 RUN ./gradlew clean build -x test
 RUN ./gradlew installDist
 
-# Expose the application port
-#EXPOSE 80
-
-# Environment variables
-#ENV POSTGRES_URL=postgresql:5432
-#ENV POSTGRES_DATABASE=machine_manager
-#ENV POSTGRES_USER=postgres
-#ENV POSTGRES_PASSWORD=postgres
-
 # Run the application
 CMD ["build/install/Manager/bin/Manager"]

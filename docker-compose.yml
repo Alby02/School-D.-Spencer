@@ -32,8 +32,12 @@ services:
         build:
             context: ./manager
             dockerfile: Dockerfile
-        expose:
-            - 1883
+        environment:
+            - POSTGRES_DB=${POSTGRES_DB_LOCAL}
+            - POSTGRES_USER=${POSTGRES_USER_LOCAL}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_LOCAL}
+            - POSTGRES_URL=${POSTGRES_URL_LOCAL}
+            - MQTT_URL=${MQTT_URL_LOCAL}
         networks:
             - mqtt-local-network
             - postgres-local-network
@@ -47,8 +51,13 @@ services:
         build:
             context: ./assistance
             dockerfile: Dockerfile
-        expose:
-            - 1883
+        environment:
+            - POSTGRES_DB=${POSTGRES_DB_LOCAL}
+            - POSTGRES_USER=${POSTGRES_USER_LOCAL}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_LOCAL}
+            - POSTGRES_URL=${POSTGRES_URL_LOCAL}
+            - MQTT_URL_LOCAL=${MQTT_URL_LOCAL}
+            # - MQTT_URL_REMOTE=${MQTT_URL_REMOTE}
         networks:
             - mqtt-local-network
             - postgres-local-network
@@ -62,8 +71,14 @@ services:
         build:
             context: ./bank
             dockerfile: Dockerfile
-        expose:
-            - 1883
+        stdin_open: true
+        tty: true
+        environment:
+            - POSTGRES_DB=${POSTGRES_DB_LOCAL}
+            - POSTGRES_USER=${POSTGRES_USER_LOCAL}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_LOCAL}
+            - POSTGRES_URL=${POSTGRES_URL_LOCAL}
+            - MQTT_URL=${MQTT_URL_LOCAL}
         networks:
             - mqtt-local-network
             - postgres-local-network
@@ -77,8 +92,12 @@ services:
         build:
             context: ./issuer
             dockerfile: Dockerfile
-        expose:
-            - 1883
+        environment:
+            - POSTGRES_DB=${POSTGRES_DB_LOCAL}
+            - POSTGRES_USER=${POSTGRES_USER_LOCAL}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_LOCAL}
+            - POSTGRES_URL=${POSTGRES_URL_LOCAL}
+            - MQTT_URL=${MQTT_URL_LOCAL}
         networks:
             - mqtt-local-network
             - postgres-local-network
@@ -92,21 +111,20 @@ services:
         build:
             context: ./keypad
             dockerfile: Dockerfile
-        expose:
-            - 1883
+        stdin_open: true
+        tty: true
+        environment:
+            - POSTGRES_DB=${POSTGRES_DB_LOCAL}
+            - POSTGRES_USER=${POSTGRES_USER_LOCAL}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_LOCAL}
+            - POSTGRES_URL=${POSTGRES_URL_LOCAL}
+            - MQTT_URL=${MQTT_URL_LOCAL}
         networks:
             - mqtt-local-network
             - postgres-local-network
         depends_on:
             - mosquitto-local
             - postgres-local
-        environment:
-            - POSTGRES_DB=${POSTGRES_DB_LOCAL}
-            - POSTGRES_USER=${POSTGRES_USER_LOCAL}
-            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_LOCAL}
-            - POSTGRES_URL=postgres-local:5432
-            - MQTT_URL=mosquitto-local:1883
-
 
 networks:
     mqtt-local-network:

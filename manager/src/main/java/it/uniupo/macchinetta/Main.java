@@ -33,7 +33,7 @@ public class Main {
         String beverageId = new String(message.getPayload());
         selectedBeverage.set(beverageId);
         System.out.println("Bevanda selezionata: " + beverageId);
-        mqttClient.publish("bank/richiesta", new MqttMessage("vero".getBytes()));
+        mqttClient.publish("bank/request", new MqttMessage("vero".getBytes()));
     }
 
     private static void handleBankResponse(MqttClient mqttClient, Connection dbConnection, AtomicReference<String> selectedBeverage, MqttMessage message) {
@@ -45,7 +45,7 @@ public class Main {
             if (Integer.parseInt(credit) >= price) {
                 System.out.println("Credito sufficiente");
                 mqttClient.publish("issuer/bevanda", new MqttMessage(selectedBeverage.get().getBytes()));
-                mqttClient.publish("bank/richiesta", new MqttMessage(String.valueOf(price).getBytes()));
+                mqttClient.publish("bank/request", new MqttMessage(String.valueOf(price).getBytes()));
             } else {
                 System.out.println("Credito insufficiente");
             }

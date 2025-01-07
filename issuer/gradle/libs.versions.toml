@@ -9,4 +9,4 @@ mqtt = "1.2.5"
 junit-jupiter = {group = "org.junit.jupiter", name = "junit-jupiter"}
 junit-bom = {group = "org.junit", name = "junit-bom", version.ref = "junitBom"}
 postgresql = {group = "org.postgresql", name = "postgresql", version.ref = "postgresqlV" }
-mqtt = { module = "org.eclipse.paho:org.eclipse.paho.client.mqttv3", version.ref = "mqtt" }
+mqtt = {group = "org.eclipse.paho", name = "org.eclipse.paho.client.mqttv3", version.ref = "mqtt" }
