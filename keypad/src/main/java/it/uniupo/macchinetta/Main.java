@@ -67,7 +67,7 @@ public class Main {
                     // 5. Invio messaggio MQTT
                     try (MqttClient mqttClient = new MqttClient(mqttUrl, MqttClient.generateClientId())) {
                         mqttClient.connect();
-                        mqttClient.publish("macchinetta", new byte[]{(byte) sceltaId.intValue()}, 0, false);
+                        mqttClient.publish("keypad/bevanda", new byte[]{(byte) sceltaId.intValue()}, 0, false);
                     }
                 } else {
                     System.out.println("Bevanda non trovata nel prezzario.");
