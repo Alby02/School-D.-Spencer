@@ -22,37 +22,37 @@ public class Main {
         try (Connection databaseConnection = DriverManager.getConnection(
                 "jdbc:postgresql://" + postgresUrl + "/" + postgresDB, postgresUser, postgresPassword)) {
 
-            // Avvio del thread per la gestione delle richieste MQTT
-            Thread mqttThread = new Thread(() -> handleMqttRequests(mqttUrl, databaseConnection));
-            mqttThread.start();
+            try (MqttClient mqttClient = new MqttClient(mqttUrl, MqttClient.generateClientId())) {
 
-            // Gestione dell'interazione con l'utente
-            handleUserInput(databaseConnection);
+                handleMqttRequests(mqttClient, databaseConnection);
+
+                // Gestione dell'interazione con l'utente
+                handleUserInput(databaseConnection);
+
+            } catch (MqttException e) {
+                System.err.println("Errore MQTT: " + e.getMessage());
+            }
 
         } catch (SQLException e) {
             System.err.println("Errore durante la connessione al database: " + e.getMessage());
         }
     }
 
-    private static void handleMqttRequests(String mqttUrl, Connection databaseConnection) {
-        try (MqttClient mqttClient = new MqttClient(mqttUrl, MqttClient.generateClientId())) {
-            mqttClient.connect();
-            mqttClient.subscribe("bank/request", (topic, message) -> {
-                String richiesta = new String(message.getPayload());
-                try {
-                    if ("vero".equals(richiesta)) {
-                        // Invia il credito attuale
-                        mqttClient.publish("bank/risposta", new MqttMessage(String.valueOf(Coins.getInstance().getCredito()).getBytes()));
-                    } else {
-                        processRichiesta(Integer.parseInt(richiesta), databaseConnection, mqttClient);
-                    }
-                } catch (NumberFormatException e) {
-                    System.out.println("Richiesta non valida: " + richiesta);
+    private static void handleMqttRequests(MqttClient mqttClient, Connection databaseConnection) throws MqttException {
+        mqttClient.connect();
+        mqttClient.subscribe("bank/request", (topic, message) -> {
+            String richiesta = new String(message.getPayload());
+            try {
+                if ("vero".equals(richiesta)) {
+                    // Invia il credito attuale
+                    mqttClient.publish("bank/risposta", new MqttMessage(String.valueOf(Coins.getInstance().getCredito()).getBytes()));
+                } else {
+                    processRichiesta(Integer.parseInt(richiesta), databaseConnection, mqttClient);
                 }
-            });
-        } catch (MqttException e) {
-            System.err.println("Errore MQTT: " + e.getMessage());
-        }
+            } catch (NumberFormatException e) {
+                System.out.println("Richiesta non valida: " + richiesta);
+            }
+        });
     }
 
     private static void processRichiesta(int richiesta, Connection databaseConnection, MqttClient mqttClient) {

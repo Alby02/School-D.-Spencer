@@ -5,6 +5,7 @@ import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
@@ -26,12 +27,13 @@ public class Main {
             mqttClient.connect();
             Scanner scanner = new Scanner(System.in); // Scanner definito una sola volta
 
-            while (true) {
-                Map<Integer, Integer> bevandeMap = stampaOpzioniBevande(databaseConnection);
+            Thread.sleep(3000L);
 
-                if (bevandeMap.isEmpty()) {
-                    System.out.println("Nessuna bevanda disponibile al momento.");
-                    break;
+            while (true) {
+                ArrayList<Integer> bevande = stampaOpzioniBevande(databaseConnection);
+
+                if (bevande.isEmpty()) {
+                    System.out.println("Nessuna bevanda disponibile al momento.");;
                 }
 
                 int scelta = leggiSceltaUtente(scanner); // Scanner passato come argomento
@@ -39,12 +41,12 @@ public class Main {
                     continue;
                 }
 
-                if (!bevandeMap.containsKey(scelta)) {
+                if  (scelta < 1 || scelta > bevande.size()) {
                     System.out.println("Selezione non valida. Riprova.");
                     continue;
                 }
 
-                int idBevanda = bevandeMap.get(scelta);
+                int idBevanda = bevande.get(scelta - 1);
                 double prezzo = recuperaPrezzoBevanda(databaseConnection, idBevanda);
 
                 if (prezzo >= 0) {
@@ -59,29 +61,28 @@ public class Main {
             System.err.println("Errore nella connessione al database: " + e.getMessage());
         } catch (MqttException e) {
             System.err.println("Errore MQTT: " + e.getMessage());
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
 
-    private static Map<Integer, Integer> stampaOpzioniBevande(Connection databaseConnection) throws SQLException {
-        Map<Integer, Integer> bevandeMap = new HashMap<>();
+    private static ArrayList<Integer> stampaOpzioniBevande(Connection databaseConnection) throws SQLException {
+        ArrayList<Integer> bevande = new ArrayList<>();
 
         String query = "SELECT nome, id FROM bevande";
         try (Statement statement = databaseConnection.createStatement();
              ResultSet resultSet = statement.executeQuery(query)) {
-
-            int index = 1;
             System.out.println("Scegli una bevanda:");
             while (resultSet.next()) {
                 String nome = resultSet.getString("nome");
                 int id = resultSet.getInt("id");
 
-                bevandeMap.put(index, id);
-                System.out.println(index + ". " + nome);
-                index++;
+                bevande.add(id);
+                System.out.println(bevande.size() + ". " + nome);
             }
         }
 
-        return bevandeMap;
+        return bevande;
     }
 
     private static int leggiSceltaUtente(Scanner scanner) {

@@ -26,6 +26,17 @@ services:
         networks:
             - postgres-local-network
 
+    pgadmin-local:
+        image: dpage/pgadmin4:latest
+        container_name: pgadmin-local
+        environment:
+            - PGADMIN_DEFAULT_EMAIL=sas@sas.sas
+            - PGADMIN_DEFAULT_PASSWORD=sas
+        ports:
+            - "5088:80"
+        networks:
+            - postgres-local-network
+
     manager-local:
         image: manager-local:latest
         container_name: manager-local
@@ -57,7 +68,7 @@ services:
             - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_LOCAL}
             - POSTGRES_URL=${POSTGRES_URL_LOCAL}
             - MQTT_URL_LOCAL=${MQTT_URL_LOCAL}
-            # - MQTT_URL_REMOTE=${MQTT_URL_REMOTE}
+            - MQTT_URL_REMOTE=${MQTT_URL_REMOTE}
         networks:
             - mqtt-local-network
             - postgres-local-network

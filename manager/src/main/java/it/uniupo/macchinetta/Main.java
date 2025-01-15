@@ -50,14 +50,14 @@ public class Main {
                 System.out.println("Credito insufficiente");
             }
         } catch (SQLException | MqttException e) {
-            throw new RuntimeException(e);
+            System.err.println("Errore durante l'elaborazione della bevanda: " + e.getMessage());
         }
     }
 
     private static int fetchBeveragePrice(Connection dbConnection, String beverageId) throws SQLException {
         String query = "SELECT prezzo FROM prezzario WHERE bevanda_id = ?";
         try (PreparedStatement stmt = dbConnection.prepareStatement(query)) {
-            stmt.setString(1, beverageId);
+            stmt.setInt(1, Integer.parseInt(beverageId));
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
                 return rs.getInt("prezzo");

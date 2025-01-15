@@ -21,32 +21,41 @@ public class Main {
         try (Connection databaseConnection = DriverManager.getConnection(
                 "jdbc:postgresql://" + postgresUrl + "/" + postgresDB, postgresUser, postgresPassword)) {
 
-            gestisciErogazioneBevande(databaseConnection, mqttUrl);
+            try (MqttClient mqttClient = new MqttClient(mqttUrl, MqttClient.generateClientId())) {
+
+                gestisciErogazioneBevande(databaseConnection, mqttClient);
+
+                // wait indefinitely for the MQTT client to receive messages
+                while (true) {
+                    Thread.sleep(1000);
+                }
+            } catch (MqttException e) {
+                System.err.println("Errore MQTT: " + e.getMessage());
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
 
         } catch (SQLException e) {
             System.err.println("Errore durante la connessione al database: " + e.getMessage());
         }
     }
 
-    private static void gestisciErogazioneBevande(Connection databaseConnection, String mqttUrl) {
-        try (MqttClient mqttClient = new MqttClient(mqttUrl, MqttClient.generateClientId())) {
-            mqttClient.connect();
-            mqttClient.subscribe("issuer/bevanda", (topic, message) -> {
-                String idBevanda = new String(message.getPayload());
-                try {
-                    if (erogaBevanda(databaseConnection, idBevanda, mqttClient)) {
-                        System.out.println("Bevanda erogata con successo!");
-                        mqttClient.publish("manager/bevanda", new MqttMessage("Erogazione avvenuta con successo".getBytes()));
-                    } else {
-                        mqttClient.publish("manager/bevanda", new MqttMessage("Gnoooooooooo bevanda non erogata".getBytes()));
-                    }
-                } catch (SQLException e) {
-                    System.err.println("Errore durante l'elaborazione della bevanda: " + e.getMessage());
+    private static void gestisciErogazioneBevande(Connection databaseConnection, MqttClient mqttClient) throws MqttException {
+
+        mqttClient.connect();
+        mqttClient.subscribe("issuer/bevanda", (topic, message) -> {
+            String idBevanda = new String(message.getPayload());
+            try {
+                if (erogaBevanda(databaseConnection, idBevanda, mqttClient)) {
+                    System.out.println("Bevanda erogata con successo!");
+                    mqttClient.publish("manager/bevanda", new MqttMessage("Erogazione avvenuta con successo".getBytes()));
+                } else {
+                    mqttClient.publish("manager/bevanda", new MqttMessage("Gnoooooooooo bevanda non erogata".getBytes()));
                 }
-            });
-        } catch (MqttException e) {
-            System.err.println("Errore MQTT: " + e.getMessage());
-        }
+            } catch (SQLException e) {
+                System.err.println("Errore durante l'elaborazione della bevanda: " + e.getMessage());
+            }
+        });
     }
 
     private static boolean erogaBevanda(Connection databaseConnection, String idBevanda, MqttClient mqttClient) throws SQLException, MqttException {
@@ -59,14 +68,14 @@ public class Main {
         try (PreparedStatement ricettaStmt = databaseConnection.prepareStatement(
                 "SELECT id_cialda, quantita FROM ricette WHERE id = ?")) {
 
-            ricettaStmt.setString(1, idBevanda);
+            ricettaStmt.setInt(1, Integer.parseInt(idBevanda));
             try (ResultSet ricettaResult = ricettaStmt.executeQuery()) {
                 while (ricettaResult.next()) {
                     String idCialda = ricettaResult.getString("id_cialda");
                     int quantita = ricettaResult.getInt("quantita");
                     try (PreparedStatement updateStmt = databaseConnection.prepareStatement(
                             "SELECT nome FROM cialde WHERE id = ?")) {
-                        updateStmt.setString(1, idCialda);
+                        updateStmt.setInt(1, Integer.parseInt(idCialda));
                         try (ResultSet updateResult = updateStmt.executeQuery()) {
                             updateResult.next();
                             String nomeCialda = updateResult.getString("nome");
@@ -90,7 +99,7 @@ public class Main {
         try (PreparedStatement ricettaStmt = databaseConnection.prepareStatement(
                 "SELECT id_cialda, quantita FROM ricette WHERE id = ?")) {
 
-            ricettaStmt.setString(1, idBevanda);
+            ricettaStmt.setInt(1, Integer.parseInt(idBevanda));
             try (ResultSet ricettaResult = ricettaStmt.executeQuery()) {
                 while (ricettaResult.next()) {
                     String idCialda = ricettaResult.getString("id_cialda");
@@ -98,7 +107,7 @@ public class Main {
 
                     try (PreparedStatement cialdaStmt = databaseConnection.prepareStatement(
                             "SELECT quantita FROM cialde WHERE id = ?")) {
-                        cialdaStmt.setString(1, idCialda);
+                        cialdaStmt.setInt(1, Integer.parseInt(idCialda));
 
                         try (ResultSet cialdaResult = cialdaStmt.executeQuery()) {
                             if (cialdaResult.next()) {
