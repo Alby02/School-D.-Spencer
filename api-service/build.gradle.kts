@@ -19,6 +19,7 @@ dependencies {
     implementation(libs.spark.core)
     implementation(libs.gson)
     implementation(libs.postgresql)
+    implementation(libs.mqtt)
 }
 
 tasks.test {

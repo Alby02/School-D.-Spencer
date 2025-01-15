@@ -4,6 +4,9 @@ import java.sql.*;
 import com.google.gson.Gson;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttException;
 import spark.Spark;
 
 public class Main {
@@ -11,18 +14,25 @@ public class Main {
 
     private static final Gson gson = new Gson();
 
-    public static void main(String[] args) throws SQLException {
+    public static void main(String[] args) throws SQLException, MqttException {
         Spark.port(80);
 
         String postgresUrl = System.getenv("POSTGRES_URL");
         String postgresDatabase = System.getenv("POSTGRES_DATABASE");
         String postgresUser = System.getenv("POSTGRES_USER");
         String postgresPassword = System.getenv("POSTGRES_PASSWORD");
+        String mqttUrl = System.getenv("MQTT_URL");
 
         Connection databaseConnection = DriverManager.getConnection(
                 "jdbc:postgresql://" + postgresUrl + "/" + postgresDatabase,
                 postgresUser, postgresPassword
         );
+
+        MqttClient mqttClient = new MqttClient(mqttUrl, MqttClient.generateClientId());
+        mqttClient.connect();
+        mqttClient.subscribe("assistance", (topic, message) -> {
+            System.out.println("Assistenza richiesta: " + new String(message.getPayload()) + " su topic " + topic);
+        });
 
         Spark.get("/bevande", (req, res) -> {
             res.type("application/json");
