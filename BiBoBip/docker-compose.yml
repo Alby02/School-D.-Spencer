@@ -1,0 +1,144 @@
+
+services:
+    mosquitto-local:
+        image: eclipse-mosquitto:latest
+        container_name: mqtt-local
+        expose:
+            - "1883"
+        networks:
+            - mqtt-local-network
+        volumes:
+            - ./mosquitto/data:/mosquitto/data
+            - ./mosquitto/log:/mosquitto/log
+            - ./mosquitto/conf:/mosquitto/config
+
+    postgres-local:
+        image: postgres:latest
+        container_name: postgres-local
+        environment:
+            - POSTGRES_DB=${POSTGRES_DB_LOCAL}
+            - POSTGRES_USER=${POSTGRES_USER_LOCAL}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_LOCAL}
+        volumes:
+            - ./postgres/local/data:/var/lib/postgresql/data
+        expose:
+            - "5432"
+        networks:
+            - postgres-local-network
+
+    pgadmin-local:
+        image: dpage/pgadmin4:latest
+        container_name: pgadmin-local
+        environment:
+            - PGADMIN_DEFAULT_EMAIL=sas@sas.sas
+            - PGADMIN_DEFAULT_PASSWORD=sas
+        ports:
+            - "5088:80"
+        networks:
+            - postgres-local-network
+
+    manager-local:
+        image: manager-local:latest
+        container_name: manager-local
+        build:
+            context: manager
+            dockerfile: manager/Dockerfile
+        environment:
+            - POSTGRES_DB=${POSTGRES_DB_LOCAL}
+            - POSTGRES_USER=${POSTGRES_USER_LOCAL}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_LOCAL}
+            - POSTGRES_URL=${POSTGRES_URL_LOCAL}
+            - MQTT_URL=${MQTT_URL_LOCAL}
+        networks:
+            - mqtt-local-network
+            - postgres-local-network
+        depends_on:
+            - mosquitto-local
+            - postgres-local
+
+    assistance-local:
+        image: assistance-local:latest
+        container_name: assistance-local
+        build:
+            context: assistance
+            dockerfile: assistance/Dockerfile
+        environment:
+            - POSTGRES_DB=${POSTGRES_DB_LOCAL}
+            - POSTGRES_USER=${POSTGRES_USER_LOCAL}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_LOCAL}
+            - POSTGRES_URL=${POSTGRES_URL_LOCAL}
+            - MQTT_URL_LOCAL=${MQTT_URL_LOCAL}
+            - MQTT_URL_REMOTE=${MQTT_URL_REMOTE}
+        networks:
+            - mqtt-local-network
+            - postgres-local-network
+        depends_on:
+            - mosquitto-local
+            - postgres-local
+
+    bank-local:
+        image: bank-local:latest
+        container_name: bank-local
+        build:
+            context: bank
+            dockerfile: bank/Dockerfile
+        stdin_open: true
+        tty: true
+        environment:
+            - POSTGRES_DB=${POSTGRES_DB_LOCAL}
+            - POSTGRES_USER=${POSTGRES_USER_LOCAL}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_LOCAL}
+            - POSTGRES_URL=${POSTGRES_URL_LOCAL}
+            - MQTT_URL=${MQTT_URL_LOCAL}
+        networks:
+            - mqtt-local-network
+            - postgres-local-network
+        depends_on:
+            - mosquitto-local
+            - postgres-local
+
+    issuer-local:
+        image: issuer-local:latest
+        container_name: issuer-local
+        build:
+            context: issuer
+            dockerfile: issuer/Dockerfile
+        environment:
+            - POSTGRES_DB=${POSTGRES_DB_LOCAL}
+            - POSTGRES_USER=${POSTGRES_USER_LOCAL}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_LOCAL}
+            - POSTGRES_URL=${POSTGRES_URL_LOCAL}
+            - MQTT_URL=${MQTT_URL_LOCAL}
+        networks:
+            - mqtt-local-network
+            - postgres-local-network
+        depends_on:
+            - mosquitto-local
+            - postgres-local
+
+    keypad-local:
+        image: keypad-local:latest
+        container_name: keypad-local
+        build:
+            context: keypad
+            dockerfile: keypad/Dockerfile
+        stdin_open: true
+        tty: true
+        environment:
+            - POSTGRES_DB=${POSTGRES_DB_LOCAL}
+            - POSTGRES_USER=${POSTGRES_USER_LOCAL}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_LOCAL}
+            - POSTGRES_URL=${POSTGRES_URL_LOCAL}
+            - MQTT_URL=${MQTT_URL_LOCAL}
+        networks:
+            - mqtt-local-network
+            - postgres-local-network
+        depends_on:
+            - mosquitto-local
+            - postgres-local
+
+networks:
+    mqtt-local-network:
+        driver: bridge
+    postgres-local-network:
+        driver: bridge

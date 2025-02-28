@@ -3,5 +3,4 @@
 mosquitto/data
 mosquitto/log
 postgres/*/data
-
 .idea
