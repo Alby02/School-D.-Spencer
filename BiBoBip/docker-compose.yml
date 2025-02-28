@@ -41,8 +41,8 @@ services:
         image: manager-local:latest
         container_name: manager-local
         build:
-            context: ./manager
-            dockerfile: Dockerfile
+            context: manager
+            dockerfile: manager/Dockerfile
         environment:
             - POSTGRES_DB=${POSTGRES_DB_LOCAL}
             - POSTGRES_USER=${POSTGRES_USER_LOCAL}
@@ -60,8 +60,8 @@ services:
         image: assistance-local:latest
         container_name: assistance-local
         build:
-            context: ./assistance
-            dockerfile: Dockerfile
+            context: assistance
+            dockerfile: assistance/Dockerfile
         environment:
             - POSTGRES_DB=${POSTGRES_DB_LOCAL}
             - POSTGRES_USER=${POSTGRES_USER_LOCAL}
@@ -80,8 +80,8 @@ services:
         image: bank-local:latest
         container_name: bank-local
         build:
-            context: ./bank
-            dockerfile: Dockerfile
+            context: bank
+            dockerfile: bank/Dockerfile
         stdin_open: true
         tty: true
         environment:
@@ -101,8 +101,8 @@ services:
         image: issuer-local:latest
         container_name: issuer-local
         build:
-            context: ./issuer
-            dockerfile: Dockerfile
+            context: issuer
+            dockerfile: issuer/Dockerfile
         environment:
             - POSTGRES_DB=${POSTGRES_DB_LOCAL}
             - POSTGRES_USER=${POSTGRES_USER_LOCAL}
@@ -120,8 +120,8 @@ services:
         image: keypad-local:latest
         container_name: keypad-local
         build:
-            context: ./keypad
-            dockerfile: Dockerfile
+            context: keypad
+            dockerfile: keypad/Dockerfile
         stdin_open: true
         tty: true
         environment:
