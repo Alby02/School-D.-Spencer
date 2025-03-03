@@ -13,12 +13,12 @@ services:
 
     node-website:
         container_name: node-website
-        image: node-website:latest
+        image: website:latest
         build:
             context: website
             dockerfile: ./Dockerfile
         ports:
-            - "80:80"
+            - "80:3000"
         depends_on:
             - java-api
             - keycloak
