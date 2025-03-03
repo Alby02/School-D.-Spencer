@@ -1,5 +1,28 @@
 
 services:
+    pgadmin: # pgAdmin4 for testing purposes only (not for production)
+        image: dpage/pgadmin4
+        container_name: pgadmin
+        environment:
+            - PGADMIN_DEFAULT_EMAIL=a@a.a
+            - PGADMIN_DEFAULT_PASSWORD=a
+        ports:
+            - "5050:80"
+        networks:
+            - postgres-api-network
+
+    node-website:
+        container_name: node-website
+        image: node-website:latest
+        build:
+            context: website
+            dockerfile: ./Dockerfile
+        ports:
+            - "3000:3000"
+        depends_on:
+            - java-api
+            - keycloak
+
     eclipse-mosquitto:
         image: eclipse-mosquitto:latest
         container_name: mqtt-api
@@ -23,19 +46,22 @@ services:
             - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_API} #/run/secrets/postgres_password
         volumes:
             - ./postgres/api/data:/var/lib/postgresql/data
-        ports:
-            - "5432:5432" #for testing purposes
         expose:
             - "5432"
         networks:
             - postgres-api-network
+        healthcheck:
+            test: [ "CMD-SHELL", "pg_isready -U user" ]
+            interval: 5s
+            timeout: 3s
+            retries: 5
 
     java-api:
         container_name: api-service
         image: api-service:latest
         build:
             context: api-service
-            dockerfile: api-service/Dockerfile
+            dockerfile: ./Dockerfile
         environment:
             - POSTGRES_URL=${POSTGRES_URL_API}
             - POSTGRES_DATABASE=${POSTGRES_DB_API}
@@ -48,8 +74,10 @@ services:
             - postgres-api-network
             - mqtt-api-network
         depends_on:
-            - postgres-api
-            - eclipse-mosquitto
+            postgres-api:
+                condition: service_healthy
+            eclipse-mosquitto:
+                condition: service_started
 
     postgres-keycloak:
         image: postgres:latest
@@ -64,6 +92,11 @@ services:
             - "5432"  # Expose to services inside the network
         networks:
             - keycloak-postgres-network  # Connect PostgreSQL to Keycloak
+        healthcheck:
+            test: [ "CMD-SHELL", "pg_isready -U user" ]
+            interval: 5s
+            timeout: 3s
+            retries: 5
 
     keycloak:
         image: keycloak/keycloak:latest
@@ -81,7 +114,8 @@ services:
         networks:
             - keycloak-postgres-network  # Network between Keycloak and PostgreSQL
         depends_on:
-            - postgres-keycloak
+            postgres-keycloak:
+                condition: service_healthy
         command: start-dev
 
 

@@ -5,7 +5,7 @@ $compileChoice = Read-Host "Do you want to compile all Docker images before runn
 if ($compileChoice -eq "yes") {
 
 	# Define the folders to build
-	$folders = @("api-service")
+	$folders = @("api-service", "website")
 
 	foreach ($folder in $folders) {
 		Write-Host "Building Docker image in folder: $folder"
