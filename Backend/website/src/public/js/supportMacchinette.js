@@ -2,22 +2,6 @@ document.addEventListener("DOMContentLoaded", function () {
     fetchUniversities();
 });
 
-function fetchUniversities() {
-    fetch("http://tuo-server.com/api/universities") // Modifica con il tuo endpoint
-        .then(response => {
-            if (!response.ok) {
-                throw new Error("Errore nel recupero dei dati");
-            }
-            return response.json();
-        })
-        .then(data => {
-            displayUniversities(data);
-        })
-        .catch(error => {
-            console.error("Errore durante il recupero delle università:", error);
-        });
-}
-
 function displayUniversities(universities) {
     const supportContainer = document.getElementById("supportContainer");
     supportContainer.innerHTML = "";
@@ -32,9 +16,8 @@ function displayUniversities(universities) {
         uniElement.innerHTML = `
             <div class="album-info">
                 <a href="#">
-                    <h5>${macchinetta.name}</h5>
-                    <h5>Quantità: ${macchinetta.quantity}</h5>
-                    <button class="macchinettaButton" data-product-id="${macchinetta.product_id}">Apri Macchinette</button>
+                    <h5>${uni.name}</h5>
+                    <button class="macchinetteButton">Apri Macchinette</button>
                 </a>
             </div>
         `;

@@ -2,7 +2,8 @@
   "dependencies": {
     "ejs": "^3.1.10",
     "express": "^4.21.2",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.3"
   },
   "name": "coffee-shop-main",
   "version": "1.0.0",

@@ -2,11 +2,14 @@ package it.uniupo.restfullMachineManager;
 
 import java.sql.*;
 import com.google.gson.Gson;
+
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
+import spark.Filter;
 import spark.Spark;
 
 public class Main {
@@ -34,7 +37,29 @@ public class Main {
             System.out.println("Assistenza richiesta: " + new String(message.getPayload()) + " su topic " + topic);
         });
 
-        Spark.get("/bevande", (req, res) -> {
+        Spark.after((Filter) (request, response) -> {
+            response.header("Access-Control-Allow-Origin", "*");
+            response.header("Access-Control-Allow-Methods", "GET");
+        });
+
+        Spark.get("/universita", (req, res) -> {
+            res.type("application/json");
+            ArrayList<HashMap<String, String>> universita = new ArrayList<>();
+
+            Statement stmt = databaseConnection.createStatement();
+            ResultSet rs = stmt.executeQuery("SELECT * FROM universita");
+
+            while (rs.next()) {
+                HashMap<String, String> uni = new HashMap<>();
+                uni.put("id", rs.getInt("id") + "");
+                uni.put("nome", rs.getString("nome"));
+                universita.add(uni);
+            }
+
+            return new Gson().toJson(universita);
+        });
+
+        /*Spark.get("/bevande", (req, res) -> {
             res.type("application/json");
             Map<String, Double> bevande = new HashMap<>();
 
@@ -88,6 +113,6 @@ public class Main {
             }
             return gson.toJson("Cialde utilizzate con successo");
 
-        });
+        });*/
     }
 }

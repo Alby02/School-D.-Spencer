@@ -13,8 +13,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // Routes
-// home route
 app.get('/', (req, res) => {
+    res.render('home');
+});
+
+// home route
+app.get('/home', (req, res) => {
     res.render('home');
 });
 

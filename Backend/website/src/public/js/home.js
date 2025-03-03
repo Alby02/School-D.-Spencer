@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", function () {
   if (supportButton) {
       supportButton.addEventListener("click", function (event) {
           event.preventDefault();
-          window.location.href = "supportUni.html";
+          window.location.href = "supportUni";
       });
   }
 });

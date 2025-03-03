@@ -3,16 +3,14 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 function fetchUniversities() {
-    fetch("http://tuo-server.com/api/universities") // Modifica con il tuo endpoint
+    fetch("http://localhost:8888/universita")
         .then(response => {
             if (!response.ok) {
                 throw new Error("Errore nel recupero dei dati");
             }
-            return response.json();
+            response.json().then(displayUniversities);
         })
-        .then(data => {
-            displayUniversities(data);
-        })
+
         .catch(error => {
             console.error("Errore durante il recupero delle università:", error);
         });
@@ -32,9 +30,8 @@ function displayUniversities(universities) {
         uniElement.innerHTML = `
             <div class="album-info">
                 <a href="#">
-                    <h5>${uni.name}</h5>
-                    <h5>Quantità: ${uni.quantity}</h5>
-                    <button class="macchinetteButton" data-product-id="${uni.product_id}">Apri Macchinette</button>
+                    <h5>${uni.nome}</h5>
+                    <button class="macchinetteButton">Apri Macchinette</button>
                 </a>
             </div>
         `;
@@ -44,13 +41,9 @@ function displayUniversities(universities) {
     });
 }
 
-document.addEventListener("DOMContentLoaded", function () {
-    const supportButton = document.querySelector(".university-item .macchinetteButton");
-  
-    if (supportButton) {
-        supportButton.addEventListener("click", function (event) {
-            event.preventDefault();
-            window.location.href = "supportMacchinette.html";
-        });
+document.addEventListener("click", function (event) {
+    if (event.target.classList.contains("macchinetteButton")) {
+        event.preventDefault();
+        window.location.href = "supportMacchinette";
     }
-  });
+});
