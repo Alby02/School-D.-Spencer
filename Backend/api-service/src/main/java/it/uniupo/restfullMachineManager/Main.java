@@ -37,6 +37,25 @@ public class Main {
             System.out.println("Assistenza richiesta: " + new String(message.getPayload()) + " su topic " + topic);
         });
 
+        //ricevo messaggio mqtt dell'assistance per le cialde
+        mqttRemoteClient.subscribe("service/assistance/cialde", (topic, message) -> {
+            System.out.println("Assistenza richiesta: " + new String(message.getPayload()) + " su topic " + topic);
+
+            //controlla se la macchinetta esiste nella tabella "macchinette"
+            PreparedStatement pstmt = databaseConnection.prepareStatement("SELECT COUNT(*) FROM macchinette WHERE id = ?");
+            pstmt.setInt(1, Integer.parseInt(new String(message.getPayload())));
+
+            //se esiste inserisci un messaggio di errore nel database
+            if (pstmt.executeQuery().getInt(1) == 1) {
+                pstmt = databaseConnection.prepareStatement("INSERT INTO assistenza (macchinetta_id, messaggio) VALUES (?, ?)");
+                pstmt.setInt(1, Integer.parseInt(new String(message.getPayload())));
+                pstmt.setString(2, "Cialde esaurite");
+                pstmt.executeUpdate();
+            } else{
+                System.out.println("Macchinetta non trovata");
+            }
+        });
+
         Spark.after((Filter) (request, response) -> {
             response.header("Access-Control-Allow-Origin", "*");
             response.header("Access-Control-Allow-Methods", "GET");
@@ -58,6 +77,33 @@ public class Main {
 
             return new Gson().toJson(universita);
         });
+
+        //spark post per inviare il messaggio ad assistance per la ricarica delle cialde
+        Spark.post("assistenza/cialde", (req,res) -> {
+            res.type("application/json");
+
+            Map<String, String> body = gson.fromJson(req.body(), Map.class);
+            String idMacchina = body.get("id_macchina");
+
+            if (idMacchina == null) {
+                res.status(400);
+                return gson.toJson("Errore: ID macchinetta non fornito");
+            }
+
+            System.out.println("Ricarica segnalata per la macchina: " + idMacchina);
+
+            try {
+                mqttRemoteClient.publish("assistance/cialde/ricarica", new MqttMessage(idMacchina.getBytes()));
+                System.out.println("Messaggio di ricarica inviato per la macchina " + idMacchina);
+            } catch (MqttException e) {
+                System.err.println("Errore nell'invio del messaggio MQTT: " + e.getMessage());
+                res.status(500);
+                return gson.toJson("Errore nell'invio del messaggio");
+            }
+
+            return gson.toJson("Richiesta inviata con successo");
+        });
+
 
         /*Spark.get("/bevande", (req, res) -> {
             res.type("application/json");

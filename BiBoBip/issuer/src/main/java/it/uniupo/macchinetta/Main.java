@@ -24,6 +24,7 @@ public class Main {
             try (MqttClient mqttClient = new MqttClient(mqttUrl, MqttClient.generateClientId())) {
 
                 gestisciErogazioneBevande(databaseConnection, mqttClient);
+                gestisciRicaricaCialde(databaseConnection, mqttClient);
 
                 // wait indefinitely for the MQTT client to receive messages
                 while (true) {
@@ -54,6 +55,20 @@ public class Main {
                 }
             } catch (SQLException e) {
                 System.err.println("Errore durante l'elaborazione della bevanda: " + e.getMessage());
+            }
+        });
+    }
+
+    private static void gestisciRicaricaCialde(Connection databaseConnection, MqttClient mqttClient) throws MqttException {
+        mqttClient.subscribe("assistance/cialde/ricarica", (topic, message) -> {
+            try {
+                try (PreparedStatement cialdeStmt = databaseConnection.prepareStatement(
+                        "UPDATE cialde SET quantita = 50")) {
+                    cialdeStmt.executeUpdate();
+                    System.out.println("Ricarica cialde effettuata con successo!");
+                }
+            } catch (SQLException e) {
+                System.err.println("Errore durante la ricarica delle cialde: " + e.getMessage());
             }
         });
     }

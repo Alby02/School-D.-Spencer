@@ -36,8 +36,14 @@ public class Main {
                 });
                 mqttLocalClient.subscribe("assistance/cialde", (topic, message) -> {
                     System.out.println("Bevanda: " + new String(message.getPayload()));
-                    mqttRemoteClient.publish("assistance/" + idMacchina, new MqttMessage("Sbevanda".getBytes()));
+                    mqttRemoteClient.publish("service/assistance/cialde", new MqttMessage(idMacchina.getBytes()));
                 });
+                mqttRemoteClient.subscribe("assistance/cialde/ricarica", (topic, message) -> {
+                    System.out.println("Ricarica cialde: " + new String(message.getPayload()));
+                    mqttLocalClient.publish("assistance/cialde/ricarica", new MqttMessage("Ricarica".getBytes()));
+                });
+
+
                 //thread scassa macchina
                 while (true) {
                     Thread.sleep(1000 * 60 * 5);
