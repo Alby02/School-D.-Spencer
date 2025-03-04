@@ -28,10 +28,10 @@ function displayUniversities(universities) {
         uniElement.classList.add("university-item");
 
         uniElement.innerHTML = `
-            <div class="album-info">
+            <div class="album-info-long">
                 <a href="#">
                     <h5>${uni.nome}</h5>
-                    <button class="macchinetteButton">Apri Macchinette</button>
+                    <button class="macchinetteButton" data-id="${uni.id}">Apri Macchinette</button>
                 </a>
             </div>
         `;
@@ -39,11 +39,13 @@ function displayUniversities(universities) {
         albumCol.appendChild(uniElement);
         supportContainer.appendChild(albumCol);
     });
+    
 }
 
 document.addEventListener("click", function (event) {
     if (event.target.classList.contains("macchinetteButton")) {
         event.preventDefault();
-        window.location.href = "supportMacchinette";
+        const idUni = event.target.getAttribute("data-id");
+        window.location.href = `supportMacchinette?id_uni=${idUni}`;
     }
 });

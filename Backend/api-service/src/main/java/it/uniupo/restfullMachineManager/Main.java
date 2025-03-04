@@ -61,6 +61,7 @@ public class Main {
             response.header("Access-Control-Allow-Methods", "GET");
         });
 
+        //spark get per recuperare le informazioni universita dal database
         Spark.get("/universita", (req, res) -> {
             res.type("application/json");
             ArrayList<HashMap<String, String>> universita = new ArrayList<>();
@@ -76,6 +77,27 @@ public class Main {
             }
 
             return new Gson().toJson(universita);
+        });
+
+        //spark get per recuperare le informazioni macchinette dal database
+        Spark.get("/macchinette/:id", (req, res) -> {
+            res.type("application/json");
+            ArrayList<HashMap<String, String>> macchinette = new ArrayList<>();
+            String uniId = req.params(":id");
+
+            PreparedStatement stmt = databaseConnection.prepareStatement("SELECT * FROM macchinette WHERE id_uni = ?");
+            stmt.setInt(1, Integer.parseInt(uniId));
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                HashMap<String, String> macchinetta = new HashMap<>();
+                macchinetta.put("id", rs.getInt("id") + "");
+                macchinetta.put("id_uni", rs.getInt("id_uni") + "");
+                macchinetta.put("nome", rs.getString("nome"));
+                macchinette.add(macchinetta);
+            }
+
+            return new Gson().toJson(macchinette);
         });
 
         //spark post per inviare il messaggio ad assistance per la ricarica delle cialde
@@ -103,7 +125,6 @@ public class Main {
 
             return gson.toJson("Richiesta inviata con successo");
         });
-
 
         /*Spark.get("/bevande", (req, res) -> {
             res.type("application/json");
