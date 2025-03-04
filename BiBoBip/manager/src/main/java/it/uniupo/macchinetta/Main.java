@@ -1,17 +1,28 @@
 package it.uniupo.macchinetta;
 
 import org.eclipse.paho.client.mqttv3.*;
+
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManagerFactory;
+import java.io.FileInputStream;
+import java.security.KeyStore;
 import java.sql.*;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class Main {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         System.out.println("Hello, World!");
 
-        try (Connection databaseConnection = setupDatabaseConnection();
-             MqttClient mqttClient = new MqttClient(getEnv("MQTT_URL"), MqttClient.generateClientId())) {
+        SSLSocketFactory sslSocketFactory = createSSLSocketFactory("/app/certs/ca.crt","/app/certs/client.p12", "");
+        MqttConnectOptions options = new MqttConnectOptions();
+        options.setSocketFactory(sslSocketFactory);
 
-            mqttClient.connect();
+        try (Connection databaseConnection = setupDatabaseConnection();
+             MqttClient mqttClient = new MqttClient(getEnv("MQTT_URL"), "manager")) {
+
+            mqttClient.connect(options);
             AtomicReference<String> selectedBeverage = new AtomicReference<>();
 
             mqttClient.subscribe("keypad/bevanda", (topic, message) -> handleBeverageSelection(mqttClient, selectedBeverage, message));
@@ -22,6 +33,24 @@ public class Main {
         } catch (SQLException | MqttException | InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    private static SSLSocketFactory createSSLSocketFactory(String caCertPath, String p12Path, String password) throws Exception {
+        KeyStore keyStore = KeyStore.getInstance("PKCS12");
+        keyStore.load(new FileInputStream(p12Path), password.toCharArray()); // Empty password
+
+        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        keyManagerFactory.init(keyStore, password.toCharArray());
+
+        KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+        trustStore.load(null, null);
+        trustStore.setCertificateEntry("ca", java.security.cert.CertificateFactory.getInstance("X.509").generateCertificate(new FileInputStream(caCertPath)));
+        TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        trustManagerFactory.init(trustStore);
+
+        SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
+        sslContext.init(keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), null);
+        return sslContext.getSocketFactory();
     }
 
     private static Connection setupDatabaseConnection() throws SQLException {

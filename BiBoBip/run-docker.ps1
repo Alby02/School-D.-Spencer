@@ -13,7 +13,7 @@ if ($compileChoice -eq "yes") {
         foreach ($folder in $folders) {
             Write-Host "Building Docker image in folder: $folder"
             # Run docker build directly with the folder name
-            docker build -t "$folder-local" .\$folder
+            docker build -t "$folder" .\$folder
         }
     } else {
         # Ask the user which specific folder to compile

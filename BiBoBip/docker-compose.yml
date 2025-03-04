@@ -4,7 +4,7 @@ services:
         image: eclipse-mosquitto:latest
         container_name: mqtt-local
         expose:
-            - "1883"
+            - "8883"
         networks:
             - mqtt-local-network
         volumes:
@@ -25,8 +25,13 @@ services:
             - "5432"
         networks:
             - postgres-local-network
+        healthcheck:
+            test: [ "CMD-SHELL", "pg_isready -U user" ]
+            interval: 5s
+            timeout: 3s
+            retries: 5
 
-    pgadmin-local:
+    pgadmin-local: # pgAdmin4 for testing purposes only (not for production)
         image: dpage/pgadmin4:latest
         container_name: pgadmin-local
         environment:
@@ -38,7 +43,7 @@ services:
             - postgres-local-network
 
     manager-local:
-        image: manager-local:latest
+        image: manager:latest
         container_name: manager-local
         build:
             context: manager
@@ -49,15 +54,20 @@ services:
             - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_LOCAL}
             - POSTGRES_URL=${POSTGRES_URL_LOCAL}
             - MQTT_URL=${MQTT_URL_LOCAL}
+        volumes:
+            - ./MQTT-Certs/manager/client.p12:/app/certs/client.p12
+            - ./MQTT-Certs/ca.crt:/app/certs/ca.crt
         networks:
             - mqtt-local-network
             - postgres-local-network
         depends_on:
-            - mosquitto-local
-            - postgres-local
+            mosquitto-local:
+                condition: service_started
+            postgres-local:
+                condition: service_healthy
 
     assistance-local:
-        image: assistance-local:latest
+        image: assistance:latest
         container_name: assistance-local
         build:
             context: assistance
@@ -69,15 +79,20 @@ services:
             - POSTGRES_URL=${POSTGRES_URL_LOCAL}
             - MQTT_URL_LOCAL=${MQTT_URL_LOCAL}
             - MQTT_URL_REMOTE=${MQTT_URL_REMOTE}
+        volumes:
+            - ./MQTT-Certs/assistance/client.p12:/app/certs/client.p12
+            - ./MQTT-Certs/ca.crt:/app/certs/ca.crt
         networks:
             - mqtt-local-network
             - postgres-local-network
         depends_on:
-            - mosquitto-local
-            - postgres-local
+            mosquitto-local:
+                condition: service_started
+            postgres-local:
+                condition: service_healthy
 
     bank-local:
-        image: bank-local:latest
+        image: bank:latest
         container_name: bank-local
         build:
             context: bank
@@ -90,15 +105,20 @@ services:
             - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_LOCAL}
             - POSTGRES_URL=${POSTGRES_URL_LOCAL}
             - MQTT_URL=${MQTT_URL_LOCAL}
+        volumes:
+            - ./MQTT-Certs/bank/client.p12:/app/certs/client.p12
+            - ./MQTT-Certs/ca.crt:/app/certs/ca.crt
         networks:
             - mqtt-local-network
             - postgres-local-network
         depends_on:
-            - mosquitto-local
-            - postgres-local
+            mosquitto-local:
+                condition: service_started
+            postgres-local:
+                condition: service_healthy
 
     issuer-local:
-        image: issuer-local:latest
+        image: issuer:latest
         container_name: issuer-local
         build:
             context: issuer
@@ -109,15 +129,20 @@ services:
             - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_LOCAL}
             - POSTGRES_URL=${POSTGRES_URL_LOCAL}
             - MQTT_URL=${MQTT_URL_LOCAL}
+        volumes:
+            - ./MQTT-Certs/issuer/client.p12:/app/certs/client.p12
+            - ./MQTT-Certs/ca.crt:/app/certs/ca.crt
         networks:
             - mqtt-local-network
             - postgres-local-network
         depends_on:
-            - mosquitto-local
-            - postgres-local
+            mosquitto-local:
+                condition: service_started
+            postgres-local:
+                condition: service_healthy
 
     keypad-local:
-        image: keypad-local:latest
+        image: keypad:latest
         container_name: keypad-local
         build:
             context: keypad
@@ -130,12 +155,17 @@ services:
             - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_LOCAL}
             - POSTGRES_URL=${POSTGRES_URL_LOCAL}
             - MQTT_URL=${MQTT_URL_LOCAL}
+        volumes:
+            - ./MQTT-Certs/keypad/client.p12:/app/certs/client.p12
+            - ./MQTT-Certs/ca.crt:/app/certs/ca.crt
         networks:
             - mqtt-local-network
             - postgres-local-network
         depends_on:
-            - mosquitto-local
-            - postgres-local
+            mosquitto-local:
+                condition: service_started
+            postgres-local:
+                condition: service_healthy
 
 networks:
     mqtt-local-network:

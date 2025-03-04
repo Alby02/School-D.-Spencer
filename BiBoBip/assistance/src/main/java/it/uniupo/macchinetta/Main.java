@@ -1,15 +1,22 @@
 package it.uniupo.macchinetta;
 
 import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManagerFactory;
+import java.io.FileInputStream;
+import java.security.KeyStore;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public class Main {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         System.out.println("Hello, World!");
 
         String postgresDB = System.getenv("POSTGRES_DB");
@@ -20,12 +27,16 @@ public class Main {
         String mqttRemoteUrl = System.getenv("MQTT_URL_REMOTE");
         String idMacchina = System.getenv("ID_MACCHINA");
 
+        SSLSocketFactory sslSocketFactory_local = createSSLSocketFactory("/app/certs/ca.crt","/app/certs/client.p12", "");
+        MqttConnectOptions options_local = new MqttConnectOptions();
+        options_local.setSocketFactory(sslSocketFactory_local);
+
         try (Connection databaseConnection = DriverManager.getConnection(
                 "jdbc:postgresql://" + postgresUrl + "/" + postgresDB, postgresUser, postgresPassword)) {
 
-            try (MqttClient mqttLocalClient = new MqttClient(mqttUrl, MqttClient.generateClientId());
+            try (MqttClient mqttLocalClient = new MqttClient(mqttUrl, "assistance");
             MqttClient mqttRemoteClient = new MqttClient(mqttRemoteUrl, MqttClient.generateClientId())) {
-                mqttLocalClient.connect();
+                mqttLocalClient.connect(options_local);
                 mqttLocalClient.subscribe("assistance/bank/cassa", (topic, message) -> {
                     System.out.println("Cassa: " + new String(message.getPayload()));
                     mqttRemoteClient.publish("assistance/" + idMacchina, new MqttMessage("Scassaie".getBytes()));
@@ -59,5 +70,23 @@ public class Main {
         }
 
         //
+    }
+
+    private static SSLSocketFactory createSSLSocketFactory(String caCertPath, String p12Path, String password) throws Exception {
+        KeyStore keyStore = KeyStore.getInstance("PKCS12");
+        keyStore.load(new FileInputStream(p12Path), password.toCharArray()); // Empty password
+
+        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        keyManagerFactory.init(keyStore, password.toCharArray());
+
+        KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+        trustStore.load(null, null);
+        trustStore.setCertificateEntry("ca", java.security.cert.CertificateFactory.getInstance("X.509").generateCertificate(new FileInputStream(caCertPath)));
+        TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        trustManagerFactory.init(trustStore);
+
+        SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
+        sslContext.init(keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), null);
+        return sslContext.getSocketFactory();
     }
 }

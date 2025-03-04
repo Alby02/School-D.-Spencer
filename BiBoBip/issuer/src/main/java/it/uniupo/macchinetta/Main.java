@@ -1,14 +1,21 @@
 package it.uniupo.macchinetta;
 
 import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManagerFactory;
+import java.io.FileInputStream;
+import java.security.KeyStore;
 import java.sql.*;
 
 public class Main {
     public static final int SOFT_LIMIT = 2;
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         System.out.println("Hello, World!");
 
         // Recupero delle variabili d'ambiente
@@ -18,11 +25,15 @@ public class Main {
         String postgresUrl = System.getenv("POSTGRES_URL");
         String mqttUrl = System.getenv("MQTT_URL");
 
+        SSLSocketFactory sslSocketFactory = createSSLSocketFactory("/app/certs/ca.crt","/app/certs/client.p12", "");
+        MqttConnectOptions options = new MqttConnectOptions();
+        options.setSocketFactory(sslSocketFactory);
+
         try (Connection databaseConnection = DriverManager.getConnection(
                 "jdbc:postgresql://" + postgresUrl + "/" + postgresDB, postgresUser, postgresPassword)) {
 
-            try (MqttClient mqttClient = new MqttClient(mqttUrl, MqttClient.generateClientId())) {
-
+            try (MqttClient mqttClient = new MqttClient(mqttUrl, "issuer")) {
+                mqttClient.connect(options);
                 gestisciErogazioneBevande(databaseConnection, mqttClient);
                 gestisciRicaricaCialde(databaseConnection, mqttClient);
 
@@ -41,9 +52,25 @@ public class Main {
         }
     }
 
-    private static void gestisciErogazioneBevande(Connection databaseConnection, MqttClient mqttClient) throws MqttException {
+    private static SSLSocketFactory createSSLSocketFactory(String caCertPath, String p12Path, String password) throws Exception {
+        KeyStore keyStore = KeyStore.getInstance("PKCS12");
+        keyStore.load(new FileInputStream(p12Path), password.toCharArray()); // Empty password
 
-        mqttClient.connect();
+        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        keyManagerFactory.init(keyStore, password.toCharArray());
+
+        KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+        trustStore.load(null, null);
+        trustStore.setCertificateEntry("ca", java.security.cert.CertificateFactory.getInstance("X.509").generateCertificate(new FileInputStream(caCertPath)));
+        TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        trustManagerFactory.init(trustStore);
+
+        SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
+        sslContext.init(keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), null);
+        return sslContext.getSocketFactory();
+    }
+
+    private static void gestisciErogazioneBevande(Connection databaseConnection, MqttClient mqttClient) throws MqttException {
         mqttClient.subscribe("issuer/bevanda", (topic, message) -> {
             String idBevanda = new String(message.getPayload());
             try {
