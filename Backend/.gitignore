@@ -3,5 +3,6 @@
 mosquitto/data
 mosquitto/log
 postgres/*/data
+certs
 
 .idea

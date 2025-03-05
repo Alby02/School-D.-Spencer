@@ -23,19 +23,22 @@ services:
             - java-api
             - keycloak
 
-    eclipse-mosquitto:
+    mosquitto-backend:
         image: eclipse-mosquitto:latest
-        container_name: mqtt-api
+        container_name: mosquitto-backend
         ports:
-            - "1883:1883"
+            - "8883:8883"
         expose:
-            - "1883"
+            - "8883"
         networks:
             - mqtt-api-network
         volumes:
             - ./mosquitto/data:/mosquitto/data
             - ./mosquitto/log:/mosquitto/log
             - ./mosquitto/conf:/mosquitto/config
+            - ./certs/broker-mqtt/broker-mqtt.crt:/certs/server.crt
+            - ./certs/broker-mqtt/broker-mqtt.key:/certs/server.key
+            - ./certs/ca.crt:/certs/ca.crt
 
     postgres-api:
         image: postgres:latest
@@ -69,14 +72,19 @@ services:
             - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_API}
             - MQTT_URL=${MQTT_URL}
         ports:
-            - "8888:80"
+            - "8888:443"
+        volumes:
+            - ./certs/api-https/api-https.p12:/app/certs/https.p12
+            - ./certs/api-mqtt/api-mqtt.p12:/app/certs/mqtt.p12
+            - ./certs/ca.crt:/app/certs/ca.crt
+            - ./carts/ca.p12:/app/certs/ca.p12
         networks:
             - postgres-api-network
             - mqtt-api-network
         depends_on:
             postgres-api:
                 condition: service_healthy
-            eclipse-mosquitto:
+            mosquitto-backend:
                 condition: service_started
 
     postgres-keycloak:
