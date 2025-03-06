@@ -37,9 +37,8 @@ public class Main {
 
         String postgresFullUrl = "jdbc:postgresql://" + postgresUrl + "/" + postgresDatabase;
 
-        try (Connection databaseConnection = DriverManager.getConnection(postgresFullUrl, postgresUser, postgresPassword);
-             MqttClient mqttRemoteClient = getMqttClient(mqttUrl, databaseConnection)) {
-
+        try (Connection databaseConnection = DriverManager.getConnection(postgresFullUrl, postgresUser, postgresPassword)) {
+            MqttClient mqttRemoteClient = getMqttClient(mqttUrl, databaseConnection);
             Spark.after((request, response) -> {
                 response.header("Access-Control-Allow-Origin", "*");
                 response.header("Access-Control-Allow-Methods", "GET");

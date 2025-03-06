@@ -31,12 +31,17 @@ public class Main {
         MqttConnectOptions options_local = new MqttConnectOptions();
         options_local.setSocketFactory(sslSocketFactory_local);
 
+        SSLSocketFactory sslSocketFactory_remote = createSSLSocketFactory("/app/certs/ca.crt","/app/certs/remote.p12", "");
+        MqttConnectOptions options_remote = new MqttConnectOptions();
+        options_remote.setSocketFactory(sslSocketFactory_remote);
+
         try (Connection databaseConnection = DriverManager.getConnection(
                 "jdbc:postgresql://" + postgresUrl + "/" + postgresDB, postgresUser, postgresPassword)) {
 
             try (MqttClient mqttLocalClient = new MqttClient(mqttUrl, "assistance");
-            MqttClient mqttRemoteClient = new MqttClient(mqttRemoteUrl, MqttClient.generateClientId())) {
+            MqttClient mqttRemoteClient = new MqttClient(mqttRemoteUrl, idMacchina)) {
                 mqttLocalClient.connect(options_local);
+                mqttRemoteClient.connect(options_remote);
                 mqttLocalClient.subscribe("assistance/bank/cassa", (topic, message) -> {
                     System.out.println("Cassa: " + new String(message.getPayload()));
                     mqttRemoteClient.publish("assistance/" + idMacchina, new MqttMessage("Scassaie".getBytes()));

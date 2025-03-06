@@ -4,4 +4,6 @@ mosquitto/data
 mosquitto/log
 postgres/*/data
 .idea
-MQTT-Certs
+certs
+machines
+used_ids.txt

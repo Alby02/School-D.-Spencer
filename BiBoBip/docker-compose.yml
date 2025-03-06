@@ -2,7 +2,7 @@
 services:
     mosquitto-local:
         image: eclipse-mosquitto:latest
-        container_name: mqtt-local
+        container_name: mqtt-local-${ID}
         expose:
             - "8883"
         networks:
@@ -11,10 +11,13 @@ services:
             - ./mosquitto/data:/mosquitto/data
             - ./mosquitto/log:/mosquitto/log
             - ./mosquitto/conf:/mosquitto/config
+            - ./certs/server.crt:/certs/server.crt
+            - ./certs/server.key:/certs/server.key
+            - ./certs/ca.crt:/certs/ca.crt
 
     postgres-local:
         image: postgres:latest
-        container_name: postgres-local
+        container_name: postgres-local-${ID}
         environment:
             - POSTGRES_DB=${POSTGRES_DB_LOCAL}
             - POSTGRES_USER=${POSTGRES_USER_LOCAL}
@@ -33,7 +36,7 @@ services:
 
     pgadmin-local: # pgAdmin4 for testing purposes only (not for production)
         image: dpage/pgadmin4:latest
-        container_name: pgadmin-local
+        container_name: pgadmin-local-${ID}
         environment:
             - PGADMIN_DEFAULT_EMAIL=sas@sas.sas
             - PGADMIN_DEFAULT_PASSWORD=sas
@@ -44,7 +47,7 @@ services:
 
     manager-local:
         image: manager:latest
-        container_name: manager-local
+        container_name: manager-local-${ID}
         build:
             context: manager
             dockerfile: manager/Dockerfile
@@ -55,8 +58,8 @@ services:
             - POSTGRES_URL=${POSTGRES_URL_LOCAL}
             - MQTT_URL=${MQTT_URL_LOCAL}
         volumes:
-            - ./MQTT-Certs/manager/client.p12:/app/certs/client.p12
-            - ./MQTT-Certs/ca.crt:/app/certs/ca.crt
+            - ./certs/manager/client.p12:/app/certs/client.p12
+            - ./certs/ca.crt:/app/certs/ca.crt
         networks:
             - mqtt-local-network
             - postgres-local-network
@@ -68,7 +71,7 @@ services:
 
     assistance-local:
         image: assistance:latest
-        container_name: assistance-local
+        container_name: assistance-local-${ID}
         build:
             context: assistance
             dockerfile: assistance/Dockerfile
@@ -79,9 +82,11 @@ services:
             - POSTGRES_URL=${POSTGRES_URL_LOCAL}
             - MQTT_URL_LOCAL=${MQTT_URL_LOCAL}
             - MQTT_URL_REMOTE=${MQTT_URL_REMOTE}
+            - ID_MACCHINA=${ID}
         volumes:
-            - ./MQTT-Certs/assistance/client.p12:/app/certs/client.p12
-            - ./MQTT-Certs/ca.crt:/app/certs/ca.crt
+            - ./certs/assistance/client.p12:/app/certs/client.p12 # client.p12 is the certificate for the local broker
+            - ./certs/remote.p12:/app/certs/remote.p12 # remote.p12 is the certificate for the remote broker
+            - ./certs/ca.crt:/app/certs/ca.crt
         networks:
             - mqtt-local-network
             - postgres-local-network
@@ -93,7 +98,7 @@ services:
 
     bank-local:
         image: bank:latest
-        container_name: bank-local
+        container_name: bank-local-${ID}
         build:
             context: bank
             dockerfile: bank/Dockerfile
@@ -106,8 +111,8 @@ services:
             - POSTGRES_URL=${POSTGRES_URL_LOCAL}
             - MQTT_URL=${MQTT_URL_LOCAL}
         volumes:
-            - ./MQTT-Certs/bank/client.p12:/app/certs/client.p12
-            - ./MQTT-Certs/ca.crt:/app/certs/ca.crt
+            - ./certs/bank/client.p12:/app/certs/client.p12
+            - ./certs/ca.crt:/app/certs/ca.crt
         networks:
             - mqtt-local-network
             - postgres-local-network
@@ -119,7 +124,7 @@ services:
 
     issuer-local:
         image: issuer:latest
-        container_name: issuer-local
+        container_name: issuer-local-${ID}
         build:
             context: issuer
             dockerfile: issuer/Dockerfile
@@ -130,8 +135,8 @@ services:
             - POSTGRES_URL=${POSTGRES_URL_LOCAL}
             - MQTT_URL=${MQTT_URL_LOCAL}
         volumes:
-            - ./MQTT-Certs/issuer/client.p12:/app/certs/client.p12
-            - ./MQTT-Certs/ca.crt:/app/certs/ca.crt
+            - ./certs/issuer/client.p12:/app/certs/client.p12
+            - ./certs/ca.crt:/app/certs/ca.crt
         networks:
             - mqtt-local-network
             - postgres-local-network
@@ -143,7 +148,7 @@ services:
 
     keypad-local:
         image: keypad:latest
-        container_name: keypad-local
+        container_name: keypad-local-${ID}
         build:
             context: keypad
             dockerfile: keypad/Dockerfile
@@ -156,8 +161,8 @@ services:
             - POSTGRES_URL=${POSTGRES_URL_LOCAL}
             - MQTT_URL=${MQTT_URL_LOCAL}
         volumes:
-            - ./MQTT-Certs/keypad/client.p12:/app/certs/client.p12
-            - ./MQTT-Certs/ca.crt:/app/certs/ca.crt
+            - ./certs/keypad/client.p12:/app/certs/client.p12
+            - ./certs/ca.crt:/app/certs/ca.crt
         networks:
             - mqtt-local-network
             - postgres-local-network

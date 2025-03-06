@@ -28,10 +28,6 @@ services:
         container_name: mosquitto-backend
         ports:
             - "8883:8883"
-        expose:
-            - "8883"
-        networks:
-            - mqtt-api-network
         volumes:
             - ./mosquitto/data:/mosquitto/data
             - ./mosquitto/log:/mosquitto/log
@@ -77,10 +73,9 @@ services:
             - ./certs/api-https/api-https.p12:/app/certs/https.p12
             - ./certs/api-mqtt/api-mqtt.p12:/app/certs/mqtt.p12
             - ./certs/ca.crt:/app/certs/ca.crt
-            - ./carts/ca.p12:/app/certs/ca.p12
+            - ./certs/ca.p12:/app/certs/ca.p12
         networks:
             - postgres-api-network
-            - mqtt-api-network
         depends_on:
             postgres-api:
                 condition: service_healthy
@@ -128,8 +123,6 @@ services:
 
 
 networks:
-    mqtt-api-network:
-        driver: bridge
     postgres-api-network:
         driver: bridge
     keycloak-postgres-network:

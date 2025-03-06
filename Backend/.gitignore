@@ -2,7 +2,7 @@
 .env
 mosquitto/data
 mosquitto/log
-postgres/*/data
+postgres
 certs
 
 .idea
