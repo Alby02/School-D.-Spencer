@@ -10,14 +10,34 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.security.KeyStore;
 import java.sql.*;
 import java.util.Scanner;
 
 public class Main {
-    public static final int SOFT_LIMIT = 10;
-    public static final int HARD_LIMIT = 15;
+    public static final int SOFT_LIMIT;
+    public static final int HARD_LIMIT;
+
+    static {
+        try {
+            SOFT_LIMIT = caricaLimitiDaJson("/app/bank.json", "soft_limit");
+            HARD_LIMIT = caricaLimitiDaJson("/app/bank.json", "hard_limit");
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static int caricaLimitiDaJson(String filePath, String limit) throws FileNotFoundException {
+        // Legge il JSON
+        Gson gson = new Gson();
+        JsonObject jsonObject = gson.fromJson(new FileReader(filePath), JsonObject.class);
+
+        // Estrae i valori dal JSON
+        return jsonObject.get(limit).getAsInt();
+
+    }
 
     public static void main(String[] args) throws Exception {
         System.out.println("Hello, World!");
