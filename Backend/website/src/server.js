@@ -1,4 +1,6 @@
 const express = require('express');
+const https = require("https");
+const fs = require("fs");
 
 const app = express();
 
@@ -34,6 +36,16 @@ app.get('/supportMacchinette', (req, res) => {
 
 // Start server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+
+// Read SSL certificate and key files
+const options = {
+  key: fs.readFileSync("/certs/https.key"),
+  cert: fs.readFileSync("/certs/https.crt"),
+};
+
+// Create HTTPS server
+const server = https.createServer(options, app);
+
+server.listen(PORT, () => {
     console.log(`Server avviato su http://localhost:${PORT}`);
   });
