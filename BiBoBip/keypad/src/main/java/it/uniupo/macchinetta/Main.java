@@ -110,7 +110,7 @@ public class Main {
 
             statement.execute("CREATE TABLE bevande (id SERIAL PRIMARY KEY, nome TEXT NOT NULL, prezzo INTEGER NOT NULL)");
 
-            inserisciBevandeDaJson(databaseConnection, "/app/bevande.json");
+            inserisciBevandeDaJson(databaseConnection, "/app/keypad.json");
 
 
         } catch (SQLException e) {
