@@ -113,6 +113,7 @@ services:
         volumes:
             - ./certs/bank/client.p12:/app/certs/client.p12
             - ./certs/ca.crt:/app/certs/ca.crt
+            - ./init_values/bank.json:/app/bank.json
         networks:
             - mqtt-local-network
             - postgres-local-network
@@ -137,6 +138,7 @@ services:
         volumes:
             - ./certs/issuer/client.p12:/app/certs/client.p12
             - ./certs/ca.crt:/app/certs/ca.crt
+            - ./init_values/issuer.json:/app/issuer.json
         networks:
             - mqtt-local-network
             - postgres-local-network
@@ -163,6 +165,7 @@ services:
         volumes:
             - ./certs/keypad/client.p12:/app/certs/client.p12
             - ./certs/ca.crt:/app/certs/ca.crt
+            - ./init_values/keypad.json:/app/keypad.json
         networks:
             - mqtt-local-network
             - postgres-local-network

@@ -45,6 +45,7 @@ New-Item -ItemType Directory -Path "$machineDir\mosquitto\conf" | Out-Null
 Copy-Item -Path ".\mosquitto\conf\mosquitto.conf" -Destination "$machineDir\mosquitto\conf"  -Force
 Copy-Item -Path ".\start.ps1" -Destination "$machineDir\start.ps1" -Force
 Copy-Item -Path ".\.env" -Destination "$machineDir\.env" -Force
+Copy-Item -Path ".\init_values" -Destination "$machineDir\init_values" -Recurse -Force
 
 # Append the unique ID to the .env text file
 "ID=$uniqueId" | Add-Content -Path "$machineDir\.env"

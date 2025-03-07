@@ -18,6 +18,7 @@ dependencies {
     testImplementation(libs.junit.jupiter)
     implementation(libs.postgresql)
     implementation(libs.mqtt)
+    implementation(libs.gson)
 }
 
 tasks.test {

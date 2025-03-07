@@ -1,0 +1,12 @@
+{
+  "hard_limit": 15,
+  "soft_limit": 10,
+  "resto": [
+    { "valore": 200, "quantita": 10 },
+    { "valore": 100, "quantita": 10 },
+    { "valore": 50, "quantita": 10 },
+    { "valore": 20, "quantita": 10 },
+    { "valore": 10, "quantita": 10 },
+    { "valore": 5, "quantita": 10 }
+  ]
+}

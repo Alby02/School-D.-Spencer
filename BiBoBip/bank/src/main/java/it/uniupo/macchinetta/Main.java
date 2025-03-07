@@ -1,5 +1,8 @@
 package it.uniupo.macchinetta;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import org.eclipse.paho.client.mqttv3.*;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -7,6 +10,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.FileInputStream;
+import java.io.FileReader;
 import java.security.KeyStore;
 import java.sql.*;
 import java.util.Scanner;
@@ -32,6 +36,8 @@ public class Main {
         try (Connection databaseConnection = DriverManager.getConnection(
                 "jdbc:postgresql://" + postgresUrl + "/" + postgresDB, postgresUser, postgresPassword)) {
 
+            setupDatabase(databaseConnection);
+
             try (MqttClient mqttClient = new MqttClient(mqttUrl, "bank")) {
                 mqttClient.connect(options);
                 handleMqttRequests(mqttClient, databaseConnection);
@@ -42,6 +48,8 @@ public class Main {
             } catch (MqttException e) {
                 System.err.println("Errore MQTT: " + e.getMessage());
             }
+
+
 
         } catch (SQLException e) {
             System.err.println("Errore durante la connessione al database: " + e.getMessage());
@@ -64,6 +72,65 @@ public class Main {
         SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
         sslContext.init(keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), null);
         return sslContext.getSocketFactory();
+    }
+
+    private static void setupDatabase(Connection databaseConnection) {
+        try (Statement statement = databaseConnection.createStatement()) {
+
+            if(verificaEsistenzaTabella(databaseConnection, "resto")) return;
+
+            statement.execute("CREATE TABLE IF NOT EXISTS cassa (ricavo INT DEFAULT 0, monete INT DEFAULT 0)");
+            statement.execute("CREATE TABLE IF NOT EXISTS resto (valore INT PRIMARY KEY, quantita INT NOT NULL)");
+
+            inserisciRestoDaJson(databaseConnection, "/app/bank.json");
+
+        } catch (SQLException e) {
+            System.err.println("Errore durante la creazione delle tabelle: " + e.getMessage());
+        }
+    }
+
+    private static void inserisciRestoDaJson(Connection connection, String filePath) {
+        try {
+            // Legge il JSON
+            Gson gson = new Gson();
+            JsonObject jsonObject = gson.fromJson(new FileReader(filePath), JsonObject.class);
+            JsonArray restoArray = jsonObject.getAsJsonArray("resto");
+
+            // Query di INSERT con ON CONFLICT DO UPDATE per aggiornare la quantità in caso di duplicato
+            String insertQuery = "INSERT INTO resto (valore, quantita) VALUES (?, ?)";
+
+            try (PreparedStatement preparedStatement = connection.prepareStatement(insertQuery)) {
+                for (var element : restoArray) {
+                    JsonObject restoItem = element.getAsJsonObject();
+
+                    int valore = restoItem.get("valore").getAsInt();
+                    int quantita = restoItem.get("quantita").getAsInt();
+
+                    preparedStatement.setInt(1, valore);
+                    preparedStatement.setInt(2, quantita);
+                    preparedStatement.addBatch();
+                }
+                preparedStatement.executeBatch();
+                System.out.println("Dati inseriti nella tabella 'resto' con successo!");
+            }
+        } catch (Exception e) {
+            System.err.println("Errore durante l'inserimento dei dati: " + e.getMessage());
+        }
+    }
+
+    public static boolean verificaEsistenzaTabella(Connection connection, String tableName) throws SQLException {
+        String query = "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = ?)";
+
+        try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1, tableName);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getBoolean(1); // Restituisce true se la tabella esiste
+                }
+            }
+        }
+        return false; // Se non trova nulla, la tabella non esiste
     }
 
     private static void handleMqttRequests(MqttClient mqttClient, Connection databaseConnection) throws MqttException {

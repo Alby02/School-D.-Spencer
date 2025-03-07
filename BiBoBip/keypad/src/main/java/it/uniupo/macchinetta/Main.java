@@ -1,5 +1,9 @@
 package it.uniupo.macchinetta;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.stream.JsonReader;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
@@ -10,6 +14,8 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.security.KeyStore;
 import java.sql.*;
 import java.util.ArrayList;
@@ -34,6 +40,8 @@ public class Main {
         try (Connection databaseConnection = DriverManager.getConnection(
                 "jdbc:postgresql://" + postgresUrl + "/" + postgresDB, postgresUser, postgresPassword);
              MqttClient mqttClient = new MqttClient(mqttUrl, "keypad")) {
+
+            setupDatabase(databaseConnection);
 
             mqttClient.connect(options);
             Scanner scanner = new Scanner(System.in); // Scanner definito una sola volta
@@ -95,6 +103,70 @@ public class Main {
         return sslContext.getSocketFactory();
     }
 
+    private static void setupDatabase(Connection databaseConnection) {
+        try (Statement statement = databaseConnection.createStatement()) {
+
+            if(verificaEsistenzaTabella(databaseConnection, "bevande")) return;
+
+            statement.execute("CREATE TABLE bevande (id SERIAL PRIMARY KEY, nome TEXT NOT NULL, prezzo INTEGER NOT NULL)");
+
+            inserisciBevandeDaJson(databaseConnection, "/app/bevande.json");
+
+
+        } catch (SQLException e) {
+            System.err.println("Errore durante la creazione delle tabelle: " + e.getMessage());
+        }
+    }
+
+    private static void inserisciBevandeDaJson(Connection connection, String filePath) {
+        try {
+            // Legge il JSON
+            Gson gson = new Gson();
+            JsonObject jsonObject = gson.fromJson(new FileReader(filePath), JsonObject.class);
+            JsonArray bevandeArray = jsonObject.getAsJsonArray("bevande");
+
+            // Query di INSERT con ON CONFLICT per evitare duplicati
+            String query = "INSERT INTO bevande (id, nome, prezzo) VALUES (?, ?, ?)";
+
+            try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+                for (var element : bevandeArray) {
+                    JsonObject bevanda = element.getAsJsonObject();
+
+                    int id = bevanda.get("id").getAsInt();
+                    String nome = bevanda.get("nome").getAsString();
+                    int prezzo = bevanda.get("prezzo").getAsInt();
+
+                    preparedStatement.setInt(1, id);
+                    preparedStatement.setString(2, nome);
+                    preparedStatement.setInt(3, prezzo);
+                    preparedStatement.addBatch(); // Aggiunge alla batch query
+                }
+
+                preparedStatement.executeBatch(); // Esegue tutte le INSERT in batch
+                System.out.println("Bevande inserite correttamente!");
+
+            }
+        } catch (Exception e) {
+            System.err.println("Errore durante l'inserimento delle bevande: " + e.getMessage());
+        }
+    }
+
+    public static boolean verificaEsistenzaTabella(Connection connection, String tableName) throws SQLException {
+        String query = "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = ?)";
+
+        try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1, tableName);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getBoolean(1); // Restituisce true se la tabella esiste
+                }
+            }
+        }
+        return false; // Se non trova nulla, la tabella non esiste
+    }
+
+
     private static ArrayList<Integer> stampaOpzioniBevande(Connection databaseConnection) throws SQLException {
         ArrayList<Integer> bevande = new ArrayList<>();
 
@@ -126,7 +198,7 @@ public class Main {
     }
 
     private static double recuperaPrezzoBevanda(Connection databaseConnection, int idBevanda) {
-        String query = "SELECT prezzo FROM prezzario WHERE bevanda_id = ?";
+        String query = "SELECT prezzo FROM bevande WHERE id = ?";
         try (PreparedStatement preparedStatement = databaseConnection.prepareStatement(query)) {
             preparedStatement.setInt(1, idBevanda);
 

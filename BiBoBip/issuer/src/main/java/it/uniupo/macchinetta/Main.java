@@ -1,5 +1,8 @@
 package it.uniupo.macchinetta;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
@@ -10,6 +13,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.FileInputStream;
+import java.io.FileReader;
 import java.security.KeyStore;
 import java.sql.*;
 
@@ -31,6 +35,8 @@ public class Main {
 
         try (Connection databaseConnection = DriverManager.getConnection(
                 "jdbc:postgresql://" + postgresUrl + "/" + postgresDB, postgresUser, postgresPassword)) {
+
+            setupDatabase(databaseConnection);
 
             try (MqttClient mqttClient = new MqttClient(mqttUrl, "issuer")) {
                 mqttClient.connect(options);
@@ -68,6 +74,91 @@ public class Main {
         SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
         sslContext.init(keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), null);
         return sslContext.getSocketFactory();
+    }
+
+    private static void setupDatabase(Connection databaseConnection) {
+        try (Statement statement = databaseConnection.createStatement()) {
+
+            if(verificaEsistenzaTabella(databaseConnection, "cialde")) return;
+
+            statement.execute("CREATE TABLE IF NOT EXISTS cialde (id PRIMARY KEY,nome TEXT NOT NULL,quantita INTEGER NOT NULL)");
+            statement.execute("CREATE TABLE IF NOT EXISTS ricette (id_ricetta INTEGER NOT NULL, id_cialda INTEGER NOT NULL, quantita INTEGER NOT NULL, PRIMARY KEY (id_ricetta, id_cialda))");
+
+            inserisciDatiDaJson(databaseConnection, "/app/issuer.json");
+
+
+        } catch (SQLException e) {
+            System.err.println("Errore durante la creazione delle tabelle: " + e.getMessage());
+        }
+    }
+
+    private static void inserisciDatiDaJson(Connection connection, String filePath) {
+        try {
+            // Legge il JSON
+            Gson gson = new Gson();
+            JsonObject jsonObject = gson.fromJson(new FileReader(filePath), JsonObject.class);
+
+            JsonArray cialdeArray = jsonObject.getAsJsonArray("cialde");
+            JsonArray ricetteArray = jsonObject.getAsJsonArray("ricette");
+
+            // Query di INSERT con ON CONFLICT DO NOTHING per evitare errori su chiavi duplicate
+            String insertCialdeQuery = "INSERT INTO cialde (id, nome, quantita) VALUES (?, ?, ?)";
+            String insertRicetteQuery = "INSERT INTO ricette (id_ricetta, id_cialda, quantita) VALUES (?, ?, ?)";
+
+            // Inserimento dati nella tabella "cialde"
+            try (PreparedStatement preparedStatement = connection.prepareStatement(insertCialdeQuery)) {
+                for (var element : cialdeArray) {
+                    JsonObject cialda = element.getAsJsonObject();
+
+                    int id = cialda.get("id").getAsInt();
+                    String nome = cialda.get("nome").getAsString();
+                    int quantita = cialda.get("quantita").getAsInt();
+
+                    preparedStatement.setInt(1, id);
+                    preparedStatement.setString(2, nome);
+                    preparedStatement.setInt(3, quantita);
+                    preparedStatement.addBatch();
+                }
+                preparedStatement.executeBatch();
+                System.out.println("Cialde inserite con successo!");
+            }
+
+            // Inserimento dati nella tabella "ricette"
+            try (PreparedStatement preparedStatement = connection.prepareStatement(insertRicetteQuery)) {
+                for (var element : ricetteArray) {
+                    JsonObject ricetta = element.getAsJsonObject();
+
+                    int idRicetta = ricetta.get("id_ricetta").getAsInt();
+                    int idCialda = ricetta.get("id_cialda").getAsInt();
+                    int quantita = ricetta.get("quantita").getAsInt();
+
+                    preparedStatement.setInt(1, idRicetta);
+                    preparedStatement.setInt(2, idCialda);
+                    preparedStatement.setInt(3, quantita);
+                    preparedStatement.addBatch();
+                }
+                preparedStatement.executeBatch();
+                System.out.println("Ricette inserite con successo!");
+            }
+
+        } catch (Exception e) {
+            System.err.println("Errore durante l'inserimento dei dati: " + e.getMessage());
+        }
+    }
+
+    public static boolean verificaEsistenzaTabella(Connection connection, String tableName) throws SQLException {
+        String query = "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = ?)";
+
+        try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1, tableName);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getBoolean(1); // Restituisce true se la tabella esiste
+                }
+            }
+        }
+        return false; // Se non trova nulla, la tabella non esiste
     }
 
     private static void gestisciErogazioneBevande(Connection databaseConnection, MqttClient mqttClient) throws MqttException {
