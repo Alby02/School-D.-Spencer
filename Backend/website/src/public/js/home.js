@@ -34,3 +34,19 @@ document.addEventListener("DOMContentLoaded", function () {
       });
   }
 });
+
+document.addEventListener("DOMContentLoaded", function () {
+  var logoutButton = document.getElementById("logoutBtn");
+
+  if (logoutButton) {
+      logoutButton.addEventListener("click", function (event) {
+          event.preventDefault();
+
+          var isConfirmed = confirm("Sei sicuro di voler uscire dal tuo account?");
+
+          if (isConfirmed) {
+              window.location.href = "/login";
+          }
+      });
+  }
+});

@@ -15,6 +15,11 @@ import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import spark.Spark;
 
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.interfaces.DecodedJWT;
+import com.auth0.jwt.interfaces.JWTVerifier;
+
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
@@ -24,6 +29,8 @@ public class Main {
 
 
     private static final Gson gson = new Gson();
+    private static final String KEYCLOAK_PUBLIC_KEY = "MIIBIjANBgkqh..."; // chiave pubblica
+    private static final String ISSUER = "http://localhost:8080/realms/macchinette-realm"; // issuer
 
     public static void main(String[] args) throws Exception {
         Spark.port(443);
@@ -63,27 +70,53 @@ public class Main {
             });
 
             //spark get per recuperare le informazioni macchinette dal database
-        Spark.get("/macchinette/:id", (req, res) -> {
-            res.type("application/json");
-            ArrayList<HashMap<String, String>> macchinette = new ArrayList<>();
-            String uniId = req.params(":id");
+            Spark.get("/macchinette/:id", (req, res) -> {
+                res.type("application/json");
+                ArrayList<HashMap<String, String>> macchinette = new ArrayList<>();
+                String uniId = req.params(":id");
 
-            PreparedStatement stmt = databaseConnection.prepareStatement("SELECT * FROM macchinette WHERE id_uni = ?");
-            stmt.setInt(1, Integer.parseInt(uniId));
-            ResultSet rs = stmt.executeQuery();
+                PreparedStatement stmt = databaseConnection.prepareStatement("SELECT * FROM macchinette WHERE id_uni = ?");
+                stmt.setInt(1, Integer.parseInt(uniId));
+                ResultSet rs = stmt.executeQuery();
 
-            while (rs.next()) {
-                HashMap<String, String> macchinetta = new HashMap<>();
-                macchinetta.put("id", rs.getInt("id") + "");
-                macchinetta.put("id_uni", rs.getInt("id_uni") + "");
-                macchinetta.put("nome", rs.getString("nome"));
-                macchinette.add(macchinetta);
-            }
+                while (rs.next()) {
+                    HashMap<String, String> macchinetta = new HashMap<>();
+                    macchinetta.put("id", rs.getInt("id") + "");
+                    macchinetta.put("id_uni", rs.getInt("id_uni") + "");
+                    macchinetta.put("nome", rs.getString("nome"));
+                    macchinette.add(macchinetta);
+                }
 
-            return new Gson().toJson(macchinette);
-        });
+                return new Gson().toJson(macchinette);
+            });
 
-        //spark post per inviare il messaggio ad assistance per la ricarica delle cialde
+            //spark post per aggiungere macchinette nel database
+            Spark.post("/macchinette", (req, res) -> {
+                res.type("application/json");
+
+                Map<String, String> body = gson.fromJson(req.body(), Map.class);
+                String nomeMacchinetta = body.get("nome");
+                String idUni = body.get("id_uni");
+
+                PreparedStatement stmt = databaseConnection.prepareStatement("INSERT INTO macchinette (nome, id_uni) VALUES (?, ?)", Statement.RETURN_GENERATED_KEYS);
+                stmt.setString(1, nomeMacchinetta);
+                stmt.setInt(2, Integer.parseInt(idUni));
+
+                int affectedRows = stmt.executeUpdate();
+                if (affectedRows > 0) {
+                    ResultSet generatedKeys = stmt.getGeneratedKeys();
+                    if (generatedKeys.next()) {
+                        Map<String, String> response = new HashMap<>();
+                        response.put("id", generatedKeys.getString(1));
+                        return gson.toJson(response);
+                    }
+                }
+
+                res.status(400);
+                return gson.toJson("Errore durante l'aggiunta della macchinetta");
+            });
+
+            //spark post per inviare il messaggio ad assistance per la ricarica delle cialde
             Spark.post("assistenza/cialde", (req, res) -> {
                 res.type("application/json");
 
@@ -112,6 +145,36 @@ public class Main {
             System.err.println("Errore " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    //middleware valida il token JWT
+    public static void requireRole(String requiredRole) {
+        Spark.before((request, response) -> {
+            String authHeader = request.headers("Authorization");
+
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                Spark.halt(401, "Unauthorized");
+            }
+
+            try {
+                String token = authHeader.substring(7);
+
+                Algorithm algorithm = Algorithm.RSA256(null, null); // Verifica con la chiave pubblica
+                JWTVerifier verifier = JWT.require(algorithm)
+                        .withIssuer("http://localhost:8080/realms/macchinette-realm")
+                        .build();
+
+                DecodedJWT jwt = verifier.verify(token);
+                String role = jwt.getClaim("realm_access").asMap().get("roles").toString();
+
+                if (!role.contains(requiredRole)) {
+                    Spark.halt(403, "Forbidden");
+                }
+
+            } catch (Exception e) {
+                Spark.halt(401, "Invalid token");
+            }
+        });
     }
 
     private static MqttClient getMqttClient(String mqttUrl, Connection databaseConnection) throws Exception {

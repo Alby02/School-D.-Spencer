@@ -6,7 +6,7 @@ function fetchMacchinette() {
     const urlParams = new URLSearchParams(window.location.search);
     const idUni = urlParams.get("id_uni");
     
-    fetch(`http://localhost:8888/macchinette/${idUni}`)
+    fetch(`http://localhost:8443/macchinette/${idUni}`)
         .then(response => {
             if (!response.ok) {
                 throw new Error("Errore nel recupero dei dati");
@@ -40,5 +40,58 @@ function displayMacchinette(macchinette) {
 
         albumCol.appendChild(uniElement);
         supportContainer.appendChild(albumCol);
+    });
+}
+
+function showAddMacchinettaForm(idUni) {
+    const supportContainer = document.getElementById("supportContainer");
+    
+    const formHtml = `
+        <div id="addMacchinettaForm">
+            <label for="macchinettaNome">Nome della Macchinetta:</label>
+            <input type="text" id="macchinettaNome" placeholder="Inserisci nome macchinetta">
+            <button onclick="addMacchinetta('${idUni}')">Aggiungi</button>
+            <button onclick="cancelAddMacchinetta()">Annulla</button>
+        </div>
+    `;
+    
+    supportContainer.innerHTML = formHtml;
+}
+
+function cancelAddMacchinetta() {
+    fetchMacchinette();
+}
+
+function addMacchinetta(idUni) {
+    const macchinettaNome = document.getElementById("macchinettaNome").value;
+
+    if (macchinettaNome === "") {
+        alert("Il nome della macchinetta è obbligatorio!");
+        return;
+    }
+
+    const newMacchinetta = {
+        nome: macchinettaNome,
+        id_uni: idUni
+    };
+
+    fetch("http://localhost:8443/macchinette", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(newMacchinetta)
+    })
+    .then(response => {
+        if (response.ok) {
+            alert("Macchinetta aggiunta con successo!");
+            fetchMacchinette();
+        } else {
+            alert("Errore nell'aggiungere la macchinetta.");
+        }
+    })
+    .catch(error => {
+        console.error("Errore durante l'aggiunta della macchinetta:", error);
+        alert("Errore durante l'aggiunta della macchinetta.");
     });
 }

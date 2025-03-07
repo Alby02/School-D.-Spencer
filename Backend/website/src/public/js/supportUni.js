@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 function fetchUniversities() {
-    fetch("http://localhost:8888/universita")
+    fetch("http://localhost:8443/universita")
         .then(response => {
             if (!response.ok) {
                 throw new Error("Errore nel recupero dei dati");

@@ -16,7 +16,12 @@ app.use(express.urlencoded({ extended: false }));
 
 // Routes
 app.get('/', (req, res) => {
-    res.render('home');
+    res.render('login');
+});
+
+// login route
+app.get('/login', (req, res) => {
+    res.render('login');
 });
 
 // home route
