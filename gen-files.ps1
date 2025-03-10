@@ -60,6 +60,13 @@ KC_DB_USERNAME=keycloak
 KC_DB_PASSWORD=$p
 KC_ADMIN=admin
 KC_ADMIN_PASSWORD=$p
+
+# api keycloak
+OIDC_ISSUER=http://localhost:8080/realms/School-D.Spencer
+OIDC_CLIENT_ID=api-service
+OIDC_REDIRECT_URI=https://localhost/auth/callback
+OIDC_CLIENT_SECRET=
+
 "@
 
 # Write to .env file

@@ -14,6 +14,11 @@ services:
     node-website:
         container_name: node-website
         image: website:latest
+        environment:
+            - OIDC_ISSUER=${OIDC_ISSUER}
+            - OIDC_CLIENT_ID=${OIDC_CLIENT_ID}
+            - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET}
+            - OIDC_REDIRECT_URI=${OIDC_REDIRECT_URI}
         ports:
             - "443:3000"
         volumes:
