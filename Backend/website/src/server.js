@@ -65,6 +65,10 @@ app.get('/', (req, res) => {
     res.render('home');
 });
 
+app.get('/home', (req, res) => {
+    res.render('home');
+});
+
 app.get('/supportUni', (req, res) => {
     res.render('supportUni');
 });

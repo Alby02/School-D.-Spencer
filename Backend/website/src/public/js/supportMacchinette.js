@@ -32,26 +32,38 @@ function displayMacchinette(macchinette) {
 
         uniElement.innerHTML = `
             <div class="album-info-long">
-                <a href="#">
-                    <h5>${macchinetta.nome}</h5>
-                </a>
+                <h5>${macchinetta.nome}</h5>
+                <button class="aggiungiCancButtonButton" onclick="removeMacchinetta('${macchinetta.id}')">Rimuovi</button>
             </div>
         `;
 
         albumCol.appendChild(uniElement);
         supportContainer.appendChild(albumCol);
     });
+
+    const addUniButton = document.createElement('div');
+    addUniButton.classList.add('col-12', 'col-sm-4', 'col-md-3', 'col-lg-2', 'single-album-item', 'dynamic');
+    addUniButton.innerHTML = `
+        <div class="university-item">
+            <div class="album-info-long">
+                <button class="aggiungiCancButton" onclick="showAddMacchinettaForm('id_uni')">Aggiungi Macchinetta</button>
+            </div>
+        </div>
+    `;
+    supportContainer.appendChild(addUniButton);
 }
 
 function showAddMacchinettaForm(idUni) {
     const supportContainer = document.getElementById("supportContainer");
     
     const formHtml = `
-        <div id="addMacchinettaForm">
-            <label for="macchinettaNome">Nome della Macchinetta:</label>
-            <input type="text" id="macchinettaNome" placeholder="Inserisci nome macchinetta">
-            <button onclick="addMacchinetta('${idUni}')">Aggiungi</button>
-            <button onclick="cancelAddMacchinetta()">Annulla</button>
+        <div id="macchinetta-item">
+            <div class="album-info-long">
+                <label for="macchinettaNome">Nome della Macchinetta:</label>
+                <input type="text" id="macchinettaNome" placeholder="Inserisci nome macchinetta">
+                <button class="aggiungiCancButtonButton" onclick="addMacchinetta('${idUni}')">Aggiungi</button>
+                <button class="aggiungiCancButtonButton" onclick="cancelAddMacchinetta()">Annulla</button>
+            </div>
         </div>
     `;
     
@@ -62,6 +74,7 @@ function cancelAddMacchinetta() {
     fetchMacchinette();
 }
 
+//Aggiungi macchinetta
 function addMacchinetta(idUni) {
     const macchinettaNome = document.getElementById("macchinettaNome").value;
 
@@ -93,5 +106,31 @@ function addMacchinetta(idUni) {
     .catch(error => {
         console.error("Errore durante l'aggiunta della macchinetta:", error);
         alert("Errore durante l'aggiunta della macchinetta.");
+    });
+}
+
+//Rimuove macchinetta
+function removeMacchinetta(idMacchinetta) {
+    if (!confirm("Sei sicuro di voler rimuovere questa macchinetta?")) {
+        return;
+    }
+
+    fetch(`https://localhost:8443/macchinette/${idMacchinetta}`, {
+        method: "DELETE",
+        headers: {
+            "Content-Type": "application/json"
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            alert("Macchinetta rimossa con successo!");
+            fetchMacchinette();
+        } else {
+            alert("Errore nella rimozione della macchinetta.");
+        }
+    })
+    .catch(error => {
+        console.error("Errore durante la rimozione della macchinetta:", error);
+        alert("Errore durante la rimozione della macchinetta.");
     });
 }
