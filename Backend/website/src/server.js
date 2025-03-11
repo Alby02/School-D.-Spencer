@@ -23,7 +23,8 @@ passport.use(new OpenIDConnectStrategy({
     tokenURL: `${process.env.OIDC_ISSUER}/protocol/openid-connect/token`,
     userInfoURL: `${process.env.OIDC_ISSUER}/protocol/openid-connect/userinfo`,
     callbackURL: process.env.OIDC_REDIRECT_URI
-}, (issuer, sub, profile, accessToken, refreshToken, done) => {
+}, (issuer, profile, done) => {
+    console.log("Authentication successful, token:", profile);
     return done(null, profile);
 }));
 
@@ -43,24 +44,31 @@ app.use(express.static(__dirname + '/public'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Routes
-app.get('/', (req, res) => {
-    res.render('home');
-});
 
-app.get('/login', passport.authenticate('openidconnect'));
+
+// Auth routes
+app.get('/login', passport.authenticate('openidconnect', {session: false}));
+
+app.get('/logout', (req, res) => {
+    req.logout(() => {
+        res.redirect('/');
+    });
+});
 
 app.get('/auth/callback', passport.authenticate('openidconnect', {
     successRedirect: '/supportUni',
     failureRedirect: '/'
 }));
 
-// supportUni route
+// Routes
+app.get('/', (req, res) => {
+    res.render('home');
+});
+
 app.get('/supportUni', (req, res) => {
     res.render('supportUni');
 });
 
-// supportMacchinette route
 app.get('/supportMacchinette', (req, res) => {
     res.render('supportMacchinette');
 });

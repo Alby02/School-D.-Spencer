@@ -19,11 +19,13 @@ services:
             - OIDC_CLIENT_ID=${OIDC_CLIENT_ID}
             - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET}
             - OIDC_REDIRECT_URI=${OIDC_REDIRECT_URI}
+            - API_URL=${API_URL}
         ports:
             - "443:3000"
         volumes:
             - ./certs/web-https/web-https.key:/certs/https.key
             - ./certs/web-https/web-https.crt:/certs/https.crt
+            - ./certs/ca.crt:/certs/ca.crt
         depends_on:
             - java-api
             - keycloak
@@ -69,6 +71,7 @@ services:
             - POSTGRES_USER=${POSTGRES_USER_API}
             - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_API}
             - MQTT_URL=${MQTT_URL}
+            - KEYCLOAK_URL=${OIDC_ISSUER}
         ports:
             - "8443:443"
         volumes:

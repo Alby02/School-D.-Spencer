@@ -20,6 +20,8 @@ dependencies {
     implementation(libs.gson)
     implementation(libs.postgresql)
     implementation(libs.mqtt)
+    implementation(libs.jjwt)
+    implementation(libs.httpclient5)
 }
 
 tasks.test {

@@ -6,6 +6,7 @@ gsonV = "2.11.0"
 postgresqlV = "42.7.4"
 mqtt = "1.2.5"
 jwtV = "4.5.0"
+httpc = "5.2.1"
 
 [libraries]
 
@@ -15,4 +16,5 @@ junit-bom = {group = "org.junit", name = "junit-bom", version.ref = "junitBom"}
 gson = {group = "com.google.code.gson", name = "gson", version.ref = "gsonV"}
 postgresql = {group = "org.postgresql", name = "postgresql", version.ref = "postgresqlV"}
 mqtt = {group = "org.eclipse.paho", name = "org.eclipse.paho.client.mqttv3", version.ref = "mqtt"}
-jwt = {group = "com.auth0", name = "java-jwt", version.ref = "jwtV"}
+jjwt = {group = "com.auth0", name = "java-jwt", version.ref = "jwtV"}
+httpclient5 = {group = "org.apache.httpcomponents.client5", name = "httpclient5", version.ref = "httpc"}

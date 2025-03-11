@@ -15,11 +15,6 @@ import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import spark.Spark;
 
-import com.auth0.jwt.JWT;
-import com.auth0.jwt.algorithms.Algorithm;
-import com.auth0.jwt.interfaces.DecodedJWT;
-import com.auth0.jwt.interfaces.JWTVerifier;
-
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
@@ -29,8 +24,6 @@ public class Main {
 
 
     private static final Gson gson = new Gson();
-    private static final String KEYCLOAK_PUBLIC_KEY = "MIIBIjANBgkqh..."; // chiave pubblica
-    private static final String ISSUER = "http://localhost:8080/realms/macchinette-realm"; // issuer
 
     public static void main(String[] args) throws Exception {
         Spark.port(443);
@@ -44,29 +37,82 @@ public class Main {
 
         String postgresFullUrl = "jdbc:postgresql://" + postgresUrl + "/" + postgresDatabase;
 
-        try (Connection databaseConnection = DriverManager.getConnection(postgresFullUrl, postgresUser, postgresPassword)) {
+        try{
+            Connection databaseConnection = DriverManager.getConnection(postgresFullUrl, postgresUser, postgresPassword);
             MqttClient mqttRemoteClient = getMqttClient(mqttUrl, databaseConnection);
             Spark.after((request, response) -> {
                 response.header("Access-Control-Allow-Origin", "*");
-                response.header("Access-Control-Allow-Methods", "GET");
+                response.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE");
+                response.header("Access-Control-Allow-Credentials", "true");
+                response.header("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Requested-With,Accept,Origin");
             });
+/*
+            Spark.before((req, res) -> {
+                System.out.println("====== Incoming Request ======");
+                System.out.println("Method: " + req.requestMethod());
+                System.out.println("URL: " + req.url());
+                System.out.println("Query Params: " + req.queryString());
+                System.out.println("Protocol: " + req.protocol());
+                System.out.println("IP: " + req.ip());
+                System.out.println("Host: " + req.host());
+                System.out.println("Port: " + req.port());
+                System.out.println("User-Agent: " + req.userAgent());
+                System.out.println("Referrer: " + req.headers("Referer"));
+                System.out.println("Content-Length: " + req.contentLength());
+
+                // Log headers
+                System.out.println("Headers:");
+                req.headers().forEach(header -> System.out.println("  " + header + ": " + req.headers(header)));
+
+                // Log cookies
+                System.out.println("Cookies:");
+                req.cookies().forEach((name, value) -> System.out.println("  " + name + ": " + value));
+
+                // Read body (only if present)
+                if (req.body() != null && !req.body().isEmpty()) {
+                    System.out.println("Body: " + req.body());
+                }
+
+                System.out.println("==============================");
+            });
+
+            Spark.after((req, res) -> {
+                System.out.println("====== Response Sent ======");
+                System.out.println("Status Code: " + res.status());
+                System.out.println("Response Headers:");
+                System.out.println("  Content-Type: " + res.type());
+                System.out.println("  Set-Cookies: " + res.raw().getHeader("Set-Cookie"));
+                System.out.println("===========================");
+            });
+
+            Spark.before((req, res)->{
+                if (!KeycloakAuthMiddleware.authenticate(req, res))
+                    Spark.halt(401, "Non autorizzato");
+            });
+*/
 
             //spark get per recuperare le informazioni universita dal database
             Spark.get("/universita", (req, res) -> {
-                res.type("application/json");
-                ArrayList<HashMap<String, String>> universita = new ArrayList<>();
+                try {
+                    res.type("application/json");
+                    ArrayList<HashMap<String, String>> universita = new ArrayList<>();
 
-                Statement stmt = databaseConnection.createStatement();
-                ResultSet rs = stmt.executeQuery("SELECT * FROM universita");
+                    Statement stmt = databaseConnection.createStatement();
+                    ResultSet rs = stmt.executeQuery("SELECT * FROM universita");
 
-                while (rs.next()) {
-                    HashMap<String, String> uni = new HashMap<>();
-                    uni.put("id", rs.getInt("id") + "");
-                    uni.put("nome", rs.getString("nome"));
-                    universita.add(uni);
+                    while (rs.next()) {
+                        HashMap<String, String> uni = new HashMap<>();
+                        uni.put("id", rs.getInt("id") + "");
+                        uni.put("nome", rs.getString("nome"));
+                        universita.add(uni);
+                    }
+                    return new Gson().toJson(universita);
                 }
-
-                return new Gson().toJson(universita);
+                catch (Exception e) {
+                    System.err.println("Errore " + e.getMessage());
+                    e.printStackTrace();
+                    throw e;
+                }
             });
 
             //spark get per recuperare le informazioni macchinette dal database
@@ -145,36 +191,6 @@ public class Main {
             System.err.println("Errore " + e.getMessage());
             e.printStackTrace();
         }
-    }
-
-    //middleware valida il token JWT
-    public static void requireRole(String requiredRole) {
-        Spark.before((request, response) -> {
-            String authHeader = request.headers("Authorization");
-
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                Spark.halt(401, "Unauthorized");
-            }
-
-            try {
-                String token = authHeader.substring(7);
-
-                Algorithm algorithm = Algorithm.RSA256(null, null); // Verifica con la chiave pubblica
-                JWTVerifier verifier = JWT.require(algorithm)
-                        .withIssuer("http://localhost:8080/realms/macchinette-realm")
-                        .build();
-
-                DecodedJWT jwt = verifier.verify(token);
-                String role = jwt.getClaim("realm_access").asMap().get("roles").toString();
-
-                if (!role.contains(requiredRole)) {
-                    Spark.halt(403, "Forbidden");
-                }
-
-            } catch (Exception e) {
-                Spark.halt(401, "Invalid token");
-            }
-        });
     }
 
     private static MqttClient getMqttClient(String mqttUrl, Connection databaseConnection) throws Exception {

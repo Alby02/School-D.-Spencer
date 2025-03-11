@@ -30,6 +30,8 @@ if ($ipAddresses.Count -gt 1) {
 
 # Ensure the MQTT_URL_REMOTE is formatted correctly
 $MQTT_URL_REMOTE = "ssl://" + $localIP + ":8883"
+$KEYCLOAK_ISSUER = "http://" + $localIP + ":8080/realms/School-D.Spencer"
+$API_URL = "https://" + $localIP + ":8443"
 
 # Define the .env file content
 $envContent = @"
@@ -62,10 +64,11 @@ KC_ADMIN=admin
 KC_ADMIN_PASSWORD=$p
 
 # api keycloak
-OIDC_ISSUER=http://localhost:8080/realms/School-D.Spencer
+OIDC_ISSUER=$KEYCLOAK_ISSUER
 OIDC_CLIENT_ID=api-service
 OIDC_REDIRECT_URI=https://localhost/auth/callback
 OIDC_CLIENT_SECRET=
+API_URL=$API_URL
 
 "@
 
