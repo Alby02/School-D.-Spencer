@@ -84,7 +84,8 @@ public class Main {
             statement.execute("CREATE TABLE IF NOT EXISTS cialde (id PRIMARY KEY,nome TEXT NOT NULL,quantita INTEGER NOT NULL)");
             statement.execute("CREATE TABLE IF NOT EXISTS ricette (id_ricetta INTEGER NOT NULL, id_cialda INTEGER NOT NULL, quantita INTEGER NOT NULL, PRIMARY KEY (id_ricetta, id_cialda))");
 
-            inserisciDatiDaJson(databaseConnection, "/app/issuer.json");
+            inserisciCialdeDaJson(databaseConnection, "/app/issuer.json");
+            inserisciRicetteDaJson(databaseConnection, "/app/issuer.json");
 
 
         } catch (SQLException e) {
@@ -92,20 +93,15 @@ public class Main {
         }
     }
 
-    private static void inserisciDatiDaJson(Connection connection, String filePath) {
+    private static void inserisciCialdeDaJson(Connection connection, String filePath) {
         try {
             // Legge il JSON
             Gson gson = new Gson();
             JsonObject jsonObject = gson.fromJson(new FileReader(filePath), JsonObject.class);
-
             JsonArray cialdeArray = jsonObject.getAsJsonArray("cialde");
-            JsonArray ricetteArray = jsonObject.getAsJsonArray("ricette");
 
-            // Query di INSERT con ON CONFLICT DO NOTHING per evitare errori su chiavi duplicate
             String insertCialdeQuery = "INSERT INTO cialde (id, nome, quantita) VALUES (?, ?, ?)";
-            String insertRicetteQuery = "INSERT INTO ricette (id_ricetta, id_cialda, quantita) VALUES (?, ?, ?)";
 
-            // Inserimento dati nella tabella "cialde"
             try (PreparedStatement preparedStatement = connection.prepareStatement(insertCialdeQuery)) {
                 for (var element : cialdeArray) {
                     JsonObject cialda = element.getAsJsonObject();
@@ -122,8 +118,20 @@ public class Main {
                 preparedStatement.executeBatch();
                 System.out.println("Cialde inserite con successo!");
             }
+        } catch (Exception e) {
+            System.err.println("Errore durante l'inserimento delle cialde: " + e.getMessage());
+        }
+    }
 
-            // Inserimento dati nella tabella "ricette"
+    private static void inserisciRicetteDaJson(Connection connection, String filePath) {
+        try {
+            // Legge il JSON
+            Gson gson = new Gson();
+            JsonObject jsonObject = gson.fromJson(new FileReader(filePath), JsonObject.class);
+            JsonArray ricetteArray = jsonObject.getAsJsonArray("ricette");
+
+            String insertRicetteQuery = "INSERT INTO ricette (id_ricetta, id_cialda, quantita) VALUES (?, ?, ?)";
+
             try (PreparedStatement preparedStatement = connection.prepareStatement(insertRicetteQuery)) {
                 for (var element : ricetteArray) {
                     JsonObject ricetta = element.getAsJsonObject();
@@ -140,9 +148,8 @@ public class Main {
                 preparedStatement.executeBatch();
                 System.out.println("Ricette inserite con successo!");
             }
-
         } catch (Exception e) {
-            System.err.println("Errore durante l'inserimento dei dati: " + e.getMessage());
+            System.err.println("Errore durante l'inserimento delle ricette: " + e.getMessage());
         }
     }
 
@@ -178,17 +185,20 @@ public class Main {
     }
 
     private static void gestisciRicaricaCialde(Connection databaseConnection, MqttClient mqttClient) throws MqttException {
-        mqttClient.subscribe("assistance/cialde/ricarica", (topic, message) -> {
-            try {
-                try (PreparedStatement cialdeStmt = databaseConnection.prepareStatement(
-                        "UPDATE cialde SET quantita = 50")) {
-                    cialdeStmt.executeUpdate();
-                    System.out.println("Ricarica cialde effettuata con successo!");
+        try {
+            mqttClient.subscribe("assistance/cialde/ricarica", (topic, message) -> {
+                try (Statement statement = databaseConnection.createStatement()){
+                    statement.execute("TRUNCATE TABLE cialde");
+                    inserisciCialdeDaJson(databaseConnection, "/app/issuer.json");
+                    System.out.println("Cialde ricaricate con successo!");
                 }
-            } catch (SQLException e) {
-                System.err.println("Errore durante la ricarica delle cialde: " + e.getMessage());
-            }
-        });
+                catch (SQLException e) {
+                    System.err.println("Errore durante la ricarica delle cialde: " + e.getMessage());
+                }
+            });
+        } catch (MqttException e) {
+            System.err.println("Errore durante la sottoscrizione al topic 'assistance/cialde/ricarica': " + e.getMessage());}
+
     }
 
     private static boolean erogaBevanda(Connection databaseConnection, String idBevanda, MqttClient mqttClient) throws SQLException, MqttException {

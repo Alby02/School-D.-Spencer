@@ -44,11 +44,19 @@ public class Main {
                 mqttRemoteClient.connect(options_remote);
                 mqttLocalClient.subscribe("assistance/bank/cassa", (topic, message) -> {
                     System.out.println("Cassa: " + new String(message.getPayload()));
-                    mqttRemoteClient.publish("assistance/" + idMacchina, new MqttMessage("Scassaie".getBytes()));
+                    mqttRemoteClient.publish("service/assistance/cassa", new MqttMessage(idMacchina.getBytes()));
+                });
+                mqttRemoteClient.subscribe("assistance/cassa/svuotamento", (topic, message) -> {
+                    System.out.println("Svuotamento cassa: " + new String(message.getPayload()));
+                    mqttLocalClient.publish("assistance/cassa/svuotamento", new MqttMessage("Svuotamento cassa".getBytes()));
                 });
                 mqttLocalClient.subscribe("assistance/bank/resto", (topic, message) -> {
                     System.out.println("Resto: " + new String(message.getPayload()));
-                    mqttRemoteClient.publish("assistance/" + idMacchina, new MqttMessage("Scassaie".getBytes()));
+                    mqttRemoteClient.publish("service/assistance/resto", new MqttMessage(idMacchina.getBytes()));
+                });
+                mqttRemoteClient.subscribe("assistance/resto/ricarica", (topic, message) -> {
+                    System.out.println("Ricarica resto: " + new String(message.getPayload()));
+                    mqttLocalClient.publish("assistance/resto/ricarica", new MqttMessage("Ricarica resto".getBytes()));
                 });
                 mqttLocalClient.subscribe("assistance/cialde", (topic, message) -> {
                     System.out.println("Bevanda: " + new String(message.getPayload()));
@@ -56,7 +64,7 @@ public class Main {
                 });
                 mqttRemoteClient.subscribe("assistance/cialde/ricarica", (topic, message) -> {
                     System.out.println("Ricarica cialde: " + new String(message.getPayload()));
-                    mqttLocalClient.publish("assistance/cialde/ricarica", new MqttMessage("Ricarica".getBytes()));
+                    mqttLocalClient.publish("assistance/cialde/ricarica", new MqttMessage("Ricarica cialde".getBytes()));
                 });
 
 

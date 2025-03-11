@@ -187,6 +187,58 @@ public class Main {
 
                 return gson.toJson("Richiesta inviata con successo");
             });
+
+            //spark post per inviare il messaggio ad assistance per il resto
+            Spark.post("assistenza/resto", (req, res) -> {
+                res.type("application/json");
+
+                Map<String, String> body = gson.fromJson(req.body(), Map.class);
+                String idMacchina = body.get("id_macchina");
+
+                if (idMacchina == null) {
+                    res.status(400);
+                    return gson.toJson("Errore: ID macchinetta non fornito");
+                }
+
+                System.out.println("Richiesta di assistenza per il resto segnalata per la macchina: " + idMacchina);
+
+                try {
+                    mqttRemoteClient.publish("assistance/resto/ricarica", new MqttMessage(idMacchina.getBytes()));
+                    System.out.println("Messaggio di assistenza per il resto inviato per la macchina " + idMacchina);
+                } catch (MqttException e) {
+                    System.err.println("Errore nell'invio del messaggio MQTT: " + e.getMessage());
+                    res.status(500);
+                    return gson.toJson("Errore nell'invio del messaggio");
+                }
+
+                return gson.toJson("Richiesta inviata con successo");
+            });
+
+            //spark post per inviare il messaggio ad assistance per la cassa
+            Spark.post("assistenza/cassa", (req, res) -> {
+                res.type("application/json");
+
+                Map<String, String> body = gson.fromJson(req.body(), Map.class);
+                String idMacchina = body.get("id_macchina");
+
+                if (idMacchina == null) {
+                    res.status(400);
+                    return gson.toJson("Errore: ID macchinetta non fornito");
+                }
+
+                System.out.println("Richiesta di assistenza per la cassa segnalata per la macchina: " + idMacchina);
+
+                try {
+                    mqttRemoteClient.publish("assistance/cassa/svuotamento", new MqttMessage(idMacchina.getBytes()));
+                    System.out.println("Messaggio di assistenza per la cassa inviato per la macchina " + idMacchina);
+                } catch (MqttException e) {
+                    System.err.println("Errore nell'invio del messaggio MQTT: " + e.getMessage());
+                    res.status(500);
+                    return gson.toJson("Errore nell'invio del messaggio");
+                }
+
+                return gson.toJson("Richiesta inviata con successo");
+            });
         }catch (Exception e){
             System.err.println("Errore " + e.getMessage());
             e.printStackTrace();
@@ -203,6 +255,44 @@ public class Main {
         mqttRemoteClient.connect(options);
         mqttRemoteClient.subscribe("assistance", (topic, message) -> {
             System.out.println("Assistenza richiesta: " + new String(message.getPayload()) + " su topic " + topic);
+        });
+
+        //ricevo messaggio mqtt dell'assistance per la cassa
+        mqttRemoteClient.subscribe("service/assistance/cassa", (topic, message) -> {
+            System.out.println("Assistenza richiesta: " + new String(message.getPayload()) + " su topic " + topic);
+
+            //controlla se la macchinetta esiste nella tabella "macchinette"
+            PreparedStatement pstmt = databaseConnection.prepareStatement("SELECT COUNT(*) FROM macchinette WHERE id = ?");
+            pstmt.setInt(1, Integer.parseInt(new String(message.getPayload())));
+
+            //se esiste inserisci un messaggio di errore nel database
+            if (pstmt.executeQuery().getInt(1) == 1) {
+                pstmt = databaseConnection.prepareStatement("INSERT INTO assistenza (macchinetta_id, messaggio) VALUES (?, ?)");
+                pstmt.setInt(1, Integer.parseInt(new String(message.getPayload())));
+                pstmt.setString(2, "Cassa piena");
+                pstmt.executeUpdate();
+            } else{
+                System.out.println("Macchinetta non trovata");
+            }
+        });
+
+        //ricevo messaggio mqtt dell'assistance per il resto
+        mqttRemoteClient.subscribe("service/assistance/resto", (topic, message) -> {
+            System.out.println("Assistenza richiesta: " + new String(message.getPayload()) + " su topic " + topic);
+
+            //controlla se la macchinetta esiste nella tabella "macchinette"
+            PreparedStatement pstmt = databaseConnection.prepareStatement("SELECT COUNT(*) FROM macchinette WHERE id = ?");
+            pstmt.setInt(1, Integer.parseInt(new String(message.getPayload())));
+
+            //se esiste inserisci un messaggio di errore nel database
+            if (pstmt.executeQuery().getInt(1) == 1) {
+                pstmt = databaseConnection.prepareStatement("INSERT INTO assistenza (macchinetta_id, messaggio) VALUES (?, ?)");
+                pstmt.setInt(1, Integer.parseInt(new String(message.getPayload())));
+                pstmt.setString(2, "Resto non erogato");
+                pstmt.executeUpdate();
+            } else{
+                System.out.println("Macchinetta non trovata");
+            }
         });
 
         //ricevo messaggio mqtt dell'assistance per le cialde

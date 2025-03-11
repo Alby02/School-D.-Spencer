@@ -61,6 +61,8 @@ public class Main {
             try (MqttClient mqttClient = new MqttClient(mqttUrl, "bank")) {
                 mqttClient.connect(options);
                 handleMqttRequests(mqttClient, databaseConnection);
+                gestisciRicaricaResto(mqttClient, databaseConnection);
+                gestisciSvuotamentoCassa(mqttClient, databaseConnection);
 
                 // Gestione dell'interazione con l'utente
                 handleUserInput(databaseConnection);
@@ -74,6 +76,36 @@ public class Main {
         } catch (SQLException e) {
             System.err.println("Errore durante la connessione al database: " + e.getMessage());
         }
+    }
+
+    private static void gestisciSvuotamentoCassa(MqttClient mqttClient, Connection databaseConnection) {
+        try {
+            mqttClient.subscribe("assistance/cassa/svuotamento", (topic, message) -> {
+                try (Statement statement = databaseConnection.createStatement()) {
+                    statement.executeUpdate("UPDATE cassa SET ricavo = 0, monete = 0");
+                    System.out.println("Cassa svuotata con successo");
+                } catch (SQLException e) {
+                    System.err.println("Errore durante lo svuotamento della cassa: " + e.getMessage());
+                }
+            });
+        } catch (MqttException e) {
+            System.err.println("Errore durante la sottoscrizione al topic 'assistance/cassa/svuotamento': " + e.getMessage());
+        }
+    }
+
+    private static void gestisciRicaricaResto(MqttClient mqttClient, Connection databaseConnection) {
+        try {
+            mqttClient.subscribe("assistance/resto/ricarica", (topic, message) -> {
+                try (Statement statement = databaseConnection.createStatement()) {
+                    statement.execute("TRUNCATE TABLE resto");
+                    inserisciRestoDaJson(databaseConnection, "/app/bank.json");
+                    System.out.println("Ricarica del resto effettuata con successo");
+                } catch (SQLException e) {
+                    System.err.println("Errore durante la ricarica del resto: " + e.getMessage());
+                }
+            });
+        } catch (MqttException e) {
+            System.err.println("Errore durante la sottoscrizione al topic 'assistance/resto/ricarica': " + e.getMessage());}
     }
 
     private static SSLSocketFactory createSSLSocketFactory(String caCertPath, String p12Path, String password) throws Exception {
