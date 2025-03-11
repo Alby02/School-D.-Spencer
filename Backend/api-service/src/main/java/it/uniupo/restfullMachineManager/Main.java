@@ -116,6 +116,30 @@ public class Main {
             });
 
             //spark get per recuperare le informazioni macchinette dal database
+            Spark.post("/universita", (req, res) -> {
+                res.type("application/json");
+
+                Map<String, String> body = gson.fromJson(req.body(), Map.class);
+                String nomeUniversita = body.get("nome");
+
+                PreparedStatement stmt = databaseConnection.prepareStatement("INSERT INTO universita (nome) VALUES (?)", Statement.RETURN_GENERATED_KEYS);
+                stmt.setString(1, nomeUniversita);
+
+                int affectedRows = stmt.executeUpdate();
+                if (affectedRows > 0) {
+                    ResultSet generatedKeys = stmt.getGeneratedKeys();
+                    if (generatedKeys.next()) {
+                        Map<String, String> response = new HashMap<>();
+                        response.put("id", generatedKeys.getString(1));
+                        return gson.toJson(response);
+                    }
+                }
+
+                res.status(400);
+                return gson.toJson("Errore durante l'aggiunta dell'universita");
+            });
+
+            //spark get per recuperare le informazioni macchinette dal database
             Spark.get("/macchinette/:id", (req, res) -> {
                 res.type("application/json");
                 ArrayList<HashMap<String, String>> macchinette = new ArrayList<>();
@@ -160,6 +184,30 @@ public class Main {
 
                 res.status(400);
                 return gson.toJson("Errore durante l'aggiunta della macchinetta");
+            });
+
+            Spark.delete("/macchinette/:id", (req, res) -> {
+                res.type("application/json");
+
+                String idMacchinetta = req.params(":id");
+
+                try {
+                    PreparedStatement stmt = databaseConnection.prepareStatement("DELETE FROM macchinette WHERE id = ?");
+                    stmt.setInt(1, Integer.parseInt(idMacchinetta));
+
+                    int affectedRows = stmt.executeUpdate();
+                    if (affectedRows > 0) {
+                        return gson.toJson("Macchinetta rimossa con successo");
+                    } else {
+                        res.status(404);
+                        return gson.toJson("Macchinetta non trovata");
+                    }
+                } catch (Exception e) {
+                    System.err.println("Errore durante la rimozione della macchinetta: " + e.getMessage());
+                    e.printStackTrace();
+                    res.status(500);
+                    return gson.toJson("Errore durante la rimozione della macchinetta");
+                }
             });
 
             //spark post per inviare il messaggio ad assistance per la ricarica delle cialde
