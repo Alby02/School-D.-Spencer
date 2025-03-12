@@ -84,7 +84,7 @@ public class Main {
     }
 
     private static int fetchBeveragePrice(Connection dbConnection, String beverageId) throws SQLException {
-        String query = "SELECT prezzo FROM prezzario WHERE bevanda_id = ?";
+        String query = "SELECT prezzo FROM bevande WHERE id = ?";
         try (PreparedStatement stmt = dbConnection.prepareStatement(query)) {
             stmt.setInt(1, Integer.parseInt(beverageId));
             ResultSet rs = stmt.executeQuery();

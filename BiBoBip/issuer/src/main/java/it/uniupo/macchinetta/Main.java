@@ -81,8 +81,8 @@ public class Main {
 
             if(verificaEsistenzaTabella(databaseConnection, "cialde")) return;
 
-            statement.execute("CREATE TABLE IF NOT EXISTS cialde (id PRIMARY KEY,nome TEXT NOT NULL,quantita INTEGER NOT NULL)");
-            statement.execute("CREATE TABLE IF NOT EXISTS ricette (id_ricetta INTEGER NOT NULL, id_cialda INTEGER NOT NULL, quantita INTEGER NOT NULL, PRIMARY KEY (id_ricetta, id_cialda))");
+            statement.execute("CREATE TABLE IF NOT EXISTS cialde (id INT PRIMARY KEY,nome TEXT NOT NULL,quantita INT NOT NULL)");
+            statement.execute("CREATE TABLE IF NOT EXISTS ricette (id_ricetta INT NOT NULL, id_cialda INT NOT NULL, quantita INT NOT NULL, PRIMARY KEY (id_ricetta, id_cialda))");
 
             inserisciCialdeDaJson(databaseConnection, "/app/issuer.json");
             inserisciRicetteDaJson(databaseConnection, "/app/issuer.json");
@@ -209,7 +209,7 @@ public class Main {
 
         // Aggiorna il database e decrementa le cialde utilizzate
         try (PreparedStatement ricettaStmt = databaseConnection.prepareStatement(
-                "SELECT id_cialda, quantita FROM ricette WHERE id = ?")) {
+                "SELECT id_cialda, quantita FROM ricette WHERE id_ricetta = ?")) {
 
             ricettaStmt.setInt(1, Integer.parseInt(idBevanda));
             try (ResultSet ricettaResult = ricettaStmt.executeQuery()) {
@@ -228,7 +228,7 @@ public class Main {
                     try (PreparedStatement updateStmt = databaseConnection.prepareStatement(
                             "UPDATE cialde SET quantita = quantita - ? WHERE id = ?")) {
                         updateStmt.setInt(1, quantita);
-                        updateStmt.setString(2, idCialda);
+                        updateStmt.setInt(2, Integer.parseInt(idCialda));
                         updateStmt.executeUpdate();
                     }
                 }
@@ -240,7 +240,7 @@ public class Main {
 
     private static boolean isBevandaErogabile(Connection databaseConnection, String idBevanda, MqttClient mqttClient) throws SQLException, MqttException {
         try (PreparedStatement ricettaStmt = databaseConnection.prepareStatement(
-                "SELECT id_cialda, quantita FROM ricette WHERE id = ?")) {
+                "SELECT id_cialda, quantita FROM ricette WHERE id_ricetta = ?")) {
 
             ricettaStmt.setInt(1, Integer.parseInt(idBevanda));
             try (ResultSet ricettaResult = ricettaStmt.executeQuery()) {

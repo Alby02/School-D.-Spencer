@@ -144,6 +144,8 @@ public class Main {
             statement.execute("CREATE TABLE IF NOT EXISTS cassa (ricavo INT DEFAULT 0, monete INT DEFAULT 0)");
             statement.execute("CREATE TABLE IF NOT EXISTS resto (valore INT PRIMARY KEY, quantita INT NOT NULL)");
 
+            statement.executeUpdate("INSERT INTO cassa (ricavo, monete) VALUES (0, 0)");
+
             inserisciRestoDaJson(databaseConnection, "/app/bank.json");
 
         } catch (SQLException e) {
@@ -159,7 +161,7 @@ public class Main {
             JsonArray restoArray = jsonObject.getAsJsonArray("resto");
 
             // Query di INSERT con ON CONFLICT DO UPDATE per aggiornare la quantità in caso di duplicato
-            String insertQuery = "INSERT INTO resto (valore, quantita) VALUES (?, ?)";
+            String insertQuery = "INSERT INTO resto (valore, quantita) VALUES (?, ?) ON CONFLICT (valore) DO NOTHING";
 
             try (PreparedStatement preparedStatement = connection.prepareStatement(insertQuery)) {
                 for (var element : restoArray) {
@@ -248,7 +250,9 @@ public class Main {
                     if (resto > 0) {
                         int monete = Math.min(resto, quantita);
                         credito.changeCredit(monete * valore);
-                        statement.executeUpdate("UPDATE resto SET quantita = quantita - " + monete + " WHERE valore = " + valore);
+                        try(Statement statement1 = databaseConnection.createStatement()){
+                            statement1.executeUpdate("UPDATE resto SET quantita = quantita - " + monete + " WHERE valore = " + valore);
+                        }
                         System.out.println("Monete da " + valore + " centesimi: " + monete);
                     }
                 }
@@ -307,7 +311,7 @@ public class Main {
                 }
             } catch (Exception e) {
                 System.out.println("Errore di input. Inserire un numero valido.");
-                scanner.next(); // Consuma l'input non valido
+                e.printStackTrace();
             }
         }
     }
