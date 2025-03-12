@@ -25,7 +25,8 @@ passport.use(new OpenIDConnectStrategy({
     userInfoURL: `${process.env.OIDC_ISSUER}/protocol/openid-connect/userinfo`,
     callbackURL: process.env.OIDC_REDIRECT_URI
 }, (issuer, profile, context, idToken, accessToken, refreshToken, done) => {
-    return done(null, {profile, accessToken});
+    const expiresAt = Date.now() + (context.expires_in * 1000); // Store expiration time
+    return done(null, { profile, accessToken, refreshToken, expiresAt });
 }));
 
 passport.serializeUser((user, done) => done(null, user));
@@ -69,37 +70,88 @@ app.get('/home', (req, res) => {
 });
 
 app.get('/supportUni', (req, res) => {
+    // check if user is authenticated using passport
+    if (!req.isAuthenticated()) {
+        res.redirect('/login');
+        return;
+    }
     res.render('supportUni');
 });
 
 app.get('/supportMacchinette', (req, res) => {
+    // check if user is authenticated using passport
+    if (!req.isAuthenticated()) {
+        res.redirect('/login');
+        return;
+    }
     res.render('supportMacchinette');
 });
 
 caCert = fs.readFileSync('/certs/ca.crt');
 
-// api proxy routes use axios to forward the request to the API using caCert to validate the server certificate and req.user.accessToken to authorize the request
-app.all('/api/*',(req, res) => {
-    // check if user is authenticated using passport
-    if (!req.isAuthenticated()) {
-        res.status(401).json({message: 'Not authenticated user need to login'});
-        return;
+async function refreshAccessToken(user) {
+    if (!user.refreshToken) {
+        throw new Error("No refresh token available");
     }
 
-    const url = process.env.API_URL + req.url.replace('/api', '');
-    axios({
-        method: req.method,
-        url,
-        data: req.body,
-        headers: {
-            'Authorization': `Bearer ${req.user.accessToken}`,
-        },
-        httpsAgent: new https.Agent({ca: caCert}),
-    }).then(response => {
+    const tokenURL = `${process.env.OIDC_ISSUER}/protocol/openid-connect/token`;
+
+    try {
+        const response = await axios.post(tokenURL, new URLSearchParams({
+            grant_type: 'refresh_token',
+            client_id: process.env.OIDC_CLIENT_ID,
+            client_secret: process.env.OIDC_CLIENT_SECRET,
+            refresh_token: user.refreshToken
+        }), {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+
+        // Update user session
+        user.accessToken = response.data.access_token;
+        user.expiresAt = Date.now() + (response.data.expires_in * 1000);
+        user.refreshToken = response.data.refresh_token || user.refreshToken;
+    } catch (error) {
+        console.error("Failed to refresh access token:", error.response?.data || error.message);
+        throw new Error("Failed to refresh access token");
+    }
+}
+
+// api proxy routes use axios to forward the request to the API using caCert to validate the server certificate and req.user.accessToken to authorize the request
+
+async function ensureAuthenticated(req, res, next) {
+    if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Not authenticated, please log in' });
+    }
+
+    try {
+        // Check if access token is expired
+        if (Date.now() >= req.user.expiresAt) {
+            console.log("Access token expired, refreshing...");
+            await refreshAccessToken(req.user);
+        }
+        next(); // Move to the next middleware/route
+    } catch (error) {
+        return res.status(401).json({ message: 'Failed to refresh access token, please log in again' });
+    }
+}
+
+app.all('/api/*', ensureAuthenticated, async (req, res) => {
+    try {
+        const url = process.env.API_URL + req.url.replace('/api', '');
+        const response = await axios({
+            method: req.method,
+            url,
+            data: req.body,
+            headers: {
+                'Authorization': `Bearer ${req.user.accessToken}`,
+            },
+            httpsAgent: new https.Agent({ ca: caCert }),
+        });
+
         res.json(response.data);
-    }).catch(error => {
-        res.status(error.response.status).json(error.response.data);
-    });
+    } catch (error) {
+        res.status(error.response?.status || 500).json(error.response?.data || { message: 'Internal server error' });
+    }
 });
 
 // Start server
