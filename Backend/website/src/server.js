@@ -49,18 +49,15 @@ app.use(express.urlencoded({ extended: false }));
 // Auth routes
 app.get('/login', passport.authenticate('openidconnect'));
 
-app.get('/logout', (req, res) => {
-    console.log('Logout request received');
-    console.log('User:', req.user);
-    const keycloakLogoutUrl = `${process.env.OIDC_ISSUER}/protocol/openid-connect/logout`;
-    const LogoutUrl = keycloakLogoutUrl + 
+app.post('/logout', (req, res) => {
+    const keycloakLogoutUrl = `${process.env.OIDC_ISSUER}/protocol/openid-connect/logout` +
         `?post_logout_redirect_uri=${encodeURIComponent(process.env.OIDC_REDIRECT_URI)}` +
-        //`&client_id=${encodeURIComponent(req.user.profile.id)}` +
         `&id_token_hint=${encodeURIComponent(req.user.idToken)}`;
+        
     req.logout(function(err) {
         if (err) { return next(err); }
         req.session.destroy(() => {
-            res.redirect(LogoutUrl);
+            res.redirect(keycloakLogoutUrl);
         });
     });
 });
@@ -80,7 +77,6 @@ app.get('/home', (req, res) => {
 });
 
 app.get('/supportUni', (req, res) => {
-    // check if user is authenticated using passport
     if (!req.isAuthenticated()) {
         res.redirect('/login');
         return;
@@ -89,7 +85,6 @@ app.get('/supportUni', (req, res) => {
 });
 
 app.get('/supportMacchinette', (req, res) => {
-    // check if user is authenticated using passport
     if (!req.isAuthenticated()) {
         res.redirect('/login');
         return;
@@ -126,7 +121,8 @@ async function refreshAccessToken(user) {
     }
 }
 
-// api proxy routes use axios to forward the request to the API using caCert to validate the server certificate and req.user.accessToken to authorize the request
+// api proxy routes use axios to forward the request to the API using caCert to validate 
+// the server certificate and req.user.accessToken to authorize the request
 
 async function ensureAuthenticated(req, res, next) {
     if (!req.isAuthenticated()) {
@@ -139,7 +135,7 @@ async function ensureAuthenticated(req, res, next) {
             console.log("Access token expired, refreshing...");
             await refreshAccessToken(req.user);
         }
-        next(); // Move to the next middleware/route
+        next();
     } catch (error) {
         return res.status(401).json({ message: 'Failed to refresh access token, please log in again' });
     }

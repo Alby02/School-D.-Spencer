@@ -1,14 +1,14 @@
 document.addEventListener("DOMContentLoaded", function () {
-    fetchUniversities();
+    fetchUniversita();
 });
 
-function fetchUniversities() {
+function fetchUniversita() {
     fetch("https://localhost/api/universita")
         .then(response => {
             if (!response.ok) {
                 throw new Error("Errore nel recupero dei dati");
             }
-            response.json().then(displayUniversities);
+            response.json().then(displayUniversita);
         })
 
         .catch(error => {
@@ -16,11 +16,11 @@ function fetchUniversities() {
         });
 }
 
-function displayUniversities(universities) {
+function displayUniversita(Universities) {
     const supportContainer = document.getElementById("supportContainer");
     supportContainer.innerHTML = "";
     
-    universities.forEach(uni => {
+    Universities.forEach(uni => {
         const albumCol = document.createElement('div');
         albumCol.classList.add('col-12', 'col-sm-4', 'col-md-3', 'col-lg-2', 'single-album-item', 'dynamic');
 
@@ -31,6 +31,7 @@ function displayUniversities(universities) {
             <div class="album-info-long">
                 <h5>${uni.nome}</h5>
                 <button class="macchinetteButton" data-id="${uni.id}">Apri Macchinette</button>
+                <button class="aggiungiCancButton" onclick="removeUniversita('${uni.id}')">Rimuovi</button>
             </div>
         `;
 
@@ -42,7 +43,7 @@ function displayUniversities(universities) {
     addUniButton.classList.add('col-12', 'col-sm-4', 'col-md-3', 'col-lg-2', 'single-album-item', 'dynamic');
     addUniButton.innerHTML = `
         <div class="university-item">
-            <div class="album-info-long">
+            <div class="album-info">
                 <button class="aggiungiCancButton" onclick="showAddUniversitaForm('id')">Aggiungi Università</button>
             </div>
         </div>
@@ -50,63 +51,100 @@ function displayUniversities(universities) {
     supportContainer.appendChild(addUniButton);
 }
 
-function showAddUniversitaForm(idUni) {
-    const supportContainer = document.getElementById("supportContainer");
+function showAddUniversitaForm() {
+    const addUniButton = document.querySelector(".aggiungiCancButton[onclick*='showAddUniversitaForm']");
 
-    const albumCol = document.createElement('div');
-    albumCol.classList.add('col-12', 'col-sm-4', 'col-md-3', 'col-lg-2', 'single-album-item', 'dynamic');
+    if (addUniButton) {
+        addUniButton.style.display = "none";
 
-    const uniElement = document.createElement("div");
-    uniElement.classList.add("university-item");
+        const formContainer = document.createElement('div');
+        formContainer.id = "addUniversitaForm";
+        formContainer.classList.add('col-12', 'col-sm-4', 'col-md-3', 'col-lg-2', 'single-album-item', 'dynamic', 'd-flex', 'justify-content-center');
+
+        formContainer.innerHTML = `
+            <div class="university-item">
+                <div class="album-info-long">
+                    <h5>Nome dell'università:</h5>
+                    <input type="text" id="universitaNome" class="form-control mb-2" placeholder="Inserisci nome università">
+                    <button class="aggiungiCancButton" onclick="addUniversita()">Aggiungi</button>
+                    <button class="aggiungiCancButton" onclick="cancelUniversita()">Annulla</button>
+                </div>
+            </div>
+        `;
+
+        addUniButton.parentElement.appendChild(formContainer);
+    }
+}
+
+function cancelUniversita() {
+    const formContainer = document.getElementById("addUniversitaForm");
+    const addUniButton = document.querySelector(".aggiungiCancButton[onclick*='showAddUniversitaForm']");
     
-    const formHtml = `
-        <div class="album-info-long">
-            <h5><label for="universitaNome">Nome dell'università:</label></h5>
-            <input type="text" id="universitaNome" placeholder="Inserisci nome università">
-            <button class="aggiungiCancButton" onclick="addUniversita('${idUni}')">Aggiungi</button>
-            <button class="aggiungiCancButton" onclick="cancelAddUniversita()">Annulla</button>
-        </div>
-    `;
-    albumCol.appendChild(uniElement);
-    supportContainer.appendChild(albumCol);
-    supportContainer.innerHTML = formHtml;
+    if (formContainer) {
+        formContainer.remove();
+    }
+
+    if (addUniButton) {
+        addUniButton.style.display = "block"; // Riappare il pulsante
+    }
 }
 
-function cancelAddUniversita() {
-    fetchUniversities();
-}
-
-function addUniversita(idUni) {
-    const universitaNome = document.getElementById("universitaNome").value;
+function addUniversita() {
+    const universitaNome = document.getElementById("universitaNome").value.trim();
 
     if (universitaNome === "") {
-        alert("Il nome della universita è obbligatorio!");
+        alert("Il nome dell'università non può essere vuoto.");
         return;
     }
 
-    const newUniversita = {
-        nome: universitaNome,
-        id: idUni
+    const requestBody = {
+        nome: universitaNome
     };
 
-    fetch(`https://localhost/api/universita`, {
+    fetch("https://localhost/api/universita", {
         method: "POST",
         headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
-        body: JSON.stringify(newUniversita)
+        body: JSON.stringify(requestBody),
     })
     .then(response => {
-        if (response.ok) {
-            alert("Università aggiunta con successo!");
-            fetchUniversities();
-        } else {
-            alert("Errore nell'aggiungere l'università.");
+        if (!response.ok) {
+            throw new Error("Errore durante l'aggiunta dell'università.");
         }
+        return response.json();
+    })
+    .then(responseData => {
+        fetchUniversita();
     })
     .catch(error => {
         console.error("Errore durante l'aggiunta dell'università:", error);
         alert("Errore durante l'aggiunta dell'università.");
+    });
+}
+
+//Rimuove Universita
+function removeUniversita(idUniversita) {
+    if (!confirm("Sei sicuro di voler rimuovere questa Università?")) {
+        return;
+    }
+
+    fetch(`https://localhost/api/universita/${idUniversita}`, {
+        method: "DELETE",
+        headers: {
+            "Content-Type": "application/json"
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            fetchUniversita();
+        } else {
+            alert("L'Università ha Macchinette e non può essere eliminata.");
+        }
+    })
+    .catch(error => {
+        console.error("Errore durante la rimozione della Universita:", error);
+        alert("Errore durante la rimozione della Universita.");
     });
 }
 

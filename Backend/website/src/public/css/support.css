@@ -650,13 +650,6 @@ img {
   100% {
     -webkit-transform: scale(1);
     transform: scale(1); } }
-    
-/* Buy Now Area CSS */
-.oneMusic-buy-now-area.has-fluid {
-  padding-left: 4%;
-  padding-right: 4%;
-  position: relative;
-  z-index: 1; }
 
 /* Events Area CSS */
 .single-event-area {
@@ -910,12 +903,15 @@ img {
   text-transform: uppercase;
   cursor: default;
   padding-bottom: 5px;
+  text-align: center;
 }
 .university-item .album-info p {
   margin-bottom: 0;
 }
 .university-item .album-info-long {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
   position: relative;
   z-index: 1;
   padding-top: 6px;
@@ -927,6 +923,7 @@ img {
     text-transform: uppercase;
     cursor: default;
     padding-bottom: 5px;
+    text-align: center;
   }
   .single-album-item {
     display: inline-block;
@@ -1206,6 +1203,24 @@ img {
   max-width: calc(100% - 78px);
   width: calc(100% - 78px);
   padding-left: 30px; }
+macchinetteButton
+/* Aggiungi Università/Macchinetta CSS */
+.contact .row form .inputBox input {
+    width: 100%;
+    padding: 2rem;
+    font-size: 1.7rem;
+    color: #fff;
+    text-transform: none;
+    background: none;
+  }
+.header .search-form input {
+  width: 100%;
+  height: 100%;
+  font-size: 1.6rem;
+  color: var(--black);
+  padding: 1rem;
+  text-transform: none;
+}
 
 /* Footer Area CSS */
 .footer-area {
@@ -1449,8 +1464,9 @@ img {
   box-shadow: 0 2px 50px 0 rgba(0, 0, 0, 0.15);
 }
 
-/* Raggiungi macchinette*/
+/* Aggiungi cose*/
 .add-to-cart-btn,
+.aggiungiCancButton,
 .macchinetteButton {
   background-color: #fff;
   transition-duration: 500ms;
@@ -1459,11 +1475,12 @@ img {
   display: inline-block;
   min-width: 150px;
   height: 38px;
+  width: 100%;
   color: #000;
   border: 1px solid #000;
   border-radius: 0;
   padding: 0 15px;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 36px;
   font-weight: 700;
   text-transform: capitalize;
@@ -1471,6 +1488,8 @@ img {
 }
 .add-to-cart-btn:hover,
 .add-to-cart-btn:focus,
+.aggiungiCancButton:hover,
+.aggiungiCancButton:focus,
 .macchinetteButton:hover,
 .macchinetteButton:focus {
   font-size: 16px;
@@ -1480,57 +1499,17 @@ img {
   cursor: pointer;
 }
 .add-to-cart-btn.btn-2
-.macchinetteButton.btn-2 {
-  background-color: #000000;
-  color: #fff;
-}
-.add-to-cart-btn.btn-2:hover,
-.add-to-cart-btn.btn-2:focus,
-.macchinetteButton.btn-2:hover,
-.macchinetteButton.btn-2:focus {
-  background-color: #fff;
-  color: #232323;
-}
-
-/* Aggiungi cose*/
-.add-to-cart-btn,
-.aggiungiCancButton {
-  background-color: #fff;
-  transition-duration: 500ms;
-  position: relative;
-  z-index: 1;
-  display: inline-block;
-  min-width: 150px;
-  height: 38px;
-  color: #000;
-  border: 1px solid #000;
-  border-radius: 0;
-  padding: 0 15px;
-  font-size: 15px;
-  line-height: 36px;
-  font-weight: 700;
-  text-transform: capitalize;
-  white-space: nowrap;
-}
-.add-to-cart-btn:hover,
-.add-to-cart-btn:focus,
-.aggiungiCancButton:hover,
-.aggiungiCancButton:focus {
-  font-size: 16px;
-  font-weight: 700;
-  background-color: #000000;
-  color: #fff;
-  cursor: pointer;
-}
-.add-to-cart-btn.btn-2
-.aggiungiCancButton.btn-2 {
+.aggiungiCancButton.btn-2 
+.macchinetteButton.btn-2{
   background-color: #000000;
   color: #fff;
 }
 .add-to-cart-btn.btn-2:hover,
 .add-to-cart-btn.btn-2:focus,
 .aggiungiCancButton.btn-2:hover,
-.aggiungiCancButton.btn-2:focus {
+.aggiungiCancButton.btn-2:focus,
+.macchinetteButton.btn-2:hover,
+.macchinetteButton.btn-2:focus {
   background-color: #fff;
   color: #232323;
 }

@@ -6,12 +6,14 @@ function fetchMacchinette() {
     const urlParams = new URLSearchParams(window.location.search);
     const idUni = urlParams.get("id_uni");
     
-    fetch(`http://localhost/api/macchinette/${idUni}`)
+    fetch(`https://localhost/api/macchinette/${idUni}`)
         .then(response => {
             if (!response.ok) {
                 throw new Error("Errore nel recupero dei dati");
             }
-            response.json().then(displayMacchinette);
+            response.json().then(data => {
+                displayMacchinette(data, idUni);
+            });
         })
 
         .catch(error => {
@@ -19,7 +21,7 @@ function fetchMacchinette() {
         });
 }
 
-function displayMacchinette(macchinette) {
+function displayMacchinette(macchinette, idUni) {
     const supportContainer = document.getElementById("supportContainer");
     supportContainer.innerHTML = "";
     
@@ -28,12 +30,12 @@ function displayMacchinette(macchinette) {
         albumCol.classList.add('col-12', 'col-sm-4', 'col-md-3', 'col-lg-2', 'single-album-item', 'dynamic');
 
         const uniElement = document.createElement("div");
-        uniElement.classList.add("macchinetta-item");
+        uniElement.classList.add("university-item");
 
         uniElement.innerHTML = `
             <div class="album-info-long">
                 <h5>${macchinetta.nome}</h5>
-                <button class="aggiungiCancButtonButton" onclick="removeMacchinetta('${macchinetta.id}')">Rimuovi</button>
+                <button class="aggiungiCancButton" onclick="removeMacchinetta('${macchinetta.id}')">Rimuovi</button>
             </div>
         `;
 
@@ -41,63 +43,82 @@ function displayMacchinette(macchinette) {
         supportContainer.appendChild(albumCol);
     });
 
-    const addUniButton = document.createElement('div');
-    addUniButton.classList.add('col-12', 'col-sm-4', 'col-md-3', 'col-lg-2', 'single-album-item', 'dynamic');
-    addUniButton.innerHTML = `
+    const addMacchinettaButton = document.createElement('div');
+    addMacchinettaButton.classList.add('col-12', 'col-sm-4', 'col-md-3', 'col-lg-2', 'single-album-item', 'dynamic');
+    addMacchinettaButton.innerHTML = `
         <div class="university-item">
-            <div class="album-info-long">
-                <button class="aggiungiCancButton" onclick="showAddMacchinettaForm('id_uni')">Aggiungi Macchinetta</button>
+            <div class="album-info">
+                <button class="aggiungiCancButton" onclick="showAddMacchinettaForm('${idUni}')">Aggiungi Macchinetta</button>
             </div>
         </div>
     `;
-    supportContainer.appendChild(addUniButton);
+    supportContainer.appendChild(addMacchinettaButton);
 }
 
 function showAddMacchinettaForm(idUni) {
-    const supportContainer = document.getElementById("supportContainer");
-    
-    const formHtml = `
-        <div id="macchinetta-item">
-            <div class="album-info-long">
-                <label for="macchinettaNome">Nome della Macchinetta:</label>
-                <input type="text" id="macchinettaNome" placeholder="Inserisci nome macchinetta">
-                <button class="aggiungiCancButtonButton" onclick="addMacchinetta('${idUni}')">Aggiungi</button>
-                <button class="aggiungiCancButtonButton" onclick="cancelAddMacchinetta()">Annulla</button>
+    const addMacchinettaButton = document.querySelector(".aggiungiCancButton[onclick*='showAddMacchinettaForm']");
+
+    if (addMacchinettaButton) {
+        addMacchinettaButton.style.display = "none";
+
+        const formContainer = document.createElement('div');
+        formContainer.id = "addMacchinettaForm";
+        formContainer.classList.add('col-12', 'col-sm-4', 'col-md-3', 'col-lg-2', 'single-album-item', 'dynamic', 'd-flex', 'justify-content-center');
+
+        formContainer.innerHTML = `
+            <div class="university-item">
+                <div class="album-info-long">
+                    <h5>Nome Macchinetta:</h5>
+                    <input type="text" id="idMacchinetta" class="form-control mb-2" placeholder="Inserisci ID macchinetta">
+                    <input type="text" id="macchinettaNome" class="form-control mb-2" placeholder="Inserisci nome macchinetta">
+                    <button class="aggiungiCancButton" onclick="addMacchinetta('${idUni}')">Aggiungi</button>
+                    <button class="aggiungiCancButton" onclick="cancelAddMacchinetta()">Annulla</button>
+                </div>
             </div>
-        </div>
-    `;
-    
-    supportContainer.innerHTML = formHtml;
+        `;
+
+        addMacchinettaButton.parentElement.appendChild(formContainer);
+    }
 }
 
 function cancelAddMacchinetta() {
-    fetchMacchinette();
+    const formContainer = document.getElementById("addMacchinettaForm");
+    const addMacchinettaButton = document.querySelector(".aggiungiCancButton[onclick*='showAddMacchinettaForm']");
+    
+    if (formContainer) {
+        formContainer.remove();
+    }
+
+    if (addMacchinettaButton) {
+        addMacchinettaButton.style.display = "block";
+    }
 }
 
 //Aggiungi macchinetta
 function addMacchinetta(idUni) {
     const macchinettaNome = document.getElementById("macchinettaNome").value;
+    const idMacchinetta = document.getElementById("idMacchinetta").value;
 
-    if (macchinettaNome === "") {
-        alert("Il nome della macchinetta è obbligatorio!");
+    if (macchinettaNome === "" && idMacchinetta === "") {
+        alert("Il nome e ID della macchinetta sono obbligatori!");
         return;
     }
 
-    const newMacchinetta = {
-        nome: macchinettaNome,
-        id_uni: idUni
+    const requestBody = {
+        id: idMacchinetta,
+        id_uni: idUni,
+        nome: macchinettaNome
     };
 
-    fetch("http://localhost/api/macchinette", {
+    fetch("https://localhost/api/macchinette", {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
         },
-        body: JSON.stringify(newMacchinetta)
+        body: JSON.stringify(requestBody)
     })
     .then(response => {
         if (response.ok) {
-            alert("Macchinetta aggiunta con successo!");
             fetchMacchinette();
         } else {
             alert("Errore nell'aggiungere la macchinetta.");

@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import jakarta.servlet.http.HttpServletResponse;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
@@ -44,7 +45,7 @@ public class Main {
             try {
                 Statement stmt = databaseConnection.createStatement();
                 stmt.execute("CREATE TABLE IF NOT EXISTS universita (id SERIAL PRIMARY KEY, nome TEXT NOT NULL, guadagno INT DEFAULT 0)");
-                stmt.execute("CREATE TABLE IF NOT EXISTS macchinette (id VARCHAR(10) PRIMARY KEY, id_uni INT NOT NULL, nome TEXT NOT NULL, guadagno INT DEFAULT 0, cassa_piena BOOLEAN DEFAULT FALSE, no_resto BOOLEAN DEFAULT FALSE, no_cialde BOOLEAN DEFAULT FALSE)");
+                stmt.execute("CREATE TABLE IF NOT EXISTS macchinette (id VARCHAR(10) PRIMARY KEY, id_uni INT NOT NULL, nome TEXT NOT NULL, guadagno INT DEFAULT 0, cassa_piena BOOLEAN DEFAULT FALSE, no_resto BOOLEAN DEFAULT FALSE, no_cialde BOOLEAN DEFAULT FALSE, FOREIGN KEY (id_uni) REFERENCES universita(id))");
                 stmt.execute("CREATE TABLE IF NOT EXISTS guadagni (id SERIAL PRIMARY KEY, id_macchinetta VARCHAR(10) NOT NULL, data DATE NOT NULL, guadagno INT NOT NULL)");
             } catch (SQLException e) {
                 System.err.println("Errore durante la creazione delle tabelle: " + e.getMessage());
@@ -57,11 +58,15 @@ public class Main {
                 response.header("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Requested-With,Accept,Origin");
             });
 
+            //Token autetication Keycloak
             Spark.before((req, res)->{
                 if (!KeycloakAuthMiddleware.authenticate(req, res))
                     Spark.halt(401, "Non autorizzato");
             });
 
+            Spark.exception(Exception.class, (e, request, response) ->{
+                e.printStackTrace();
+            });
 
             //spark get per recuperare le informazioni universita dal database
             Spark.get("/universita", (req, res) -> {
@@ -111,6 +116,41 @@ public class Main {
                 return gson.toJson("Errore durante l'aggiunta dell'universita");
             });
 
+            //spark delete per rimuovere universita dal database con controllo presenza macchinette
+            Spark.delete("/universita/:id", (req, res) -> {
+                res.type("application/json");
+
+                String idUniversita = req.params(":id");
+
+                try {
+                    PreparedStatement checkStmt = databaseConnection.prepareStatement("SELECT COUNT(*) FROM macchinette WHERE id_uni = ?");
+                    checkStmt.setInt(1, Integer.parseInt(idUniversita));
+                    ResultSet rs = checkStmt.executeQuery();
+                    rs.next();
+                    int count = rs.getInt(1);
+
+                    if (count > 0) {
+                        res.status(400);
+                        return gson.toJson("Errore: L'università ha Macchinette e non può essere eliminata.");
+                    }
+
+                    PreparedStatement stmt = databaseConnection.prepareStatement("DELETE FROM universita WHERE id = ?");
+                    stmt.setInt(1, Integer.parseInt(idUniversita));
+
+                    int affectedRows = stmt.executeUpdate();
+                    if (affectedRows > 0) {
+                        return gson.toJson("Università rimossa con successo");
+                    } else {
+                        res.status(404);
+                        return gson.toJson("Università non trovata");
+                    }
+                } catch (Exception e) {
+                    System.err.println("Errore durante la rimozione dell'università: " + e.getMessage());
+                    res.status(500);
+                    return gson.toJson("Errore durante la rimozione dell'università");
+                }
+            });
+
             //spark get per recuperare le informazioni macchinette dal database
             Spark.get("/macchinette/:id", (req, res) -> {
                 res.type("application/json");
@@ -123,7 +163,7 @@ public class Main {
 
                 while (rs.next()) {
                     HashMap<String, String> macchinetta = new HashMap<>();
-                    macchinetta.put("id", rs.getInt("id") + "");
+                    macchinetta.put("id", rs.getString("id"));
                     macchinetta.put("id_uni", rs.getInt("id_uni") + "");
                     macchinetta.put("nome", rs.getString("nome"));
                     macchinette.add(macchinetta);
@@ -137,27 +177,26 @@ public class Main {
                 res.type("application/json");
 
                 Map<String, String> body = gson.fromJson(req.body(), Map.class);
-                String nomeMacchinetta = body.get("nome");
+                String id = body.get("id");
                 String idUni = body.get("id_uni");
+                String nomeMacchinetta = body.get("nome");
 
-                PreparedStatement stmt = databaseConnection.prepareStatement("INSERT INTO macchinette (nome, id_uni) VALUES (?, ?)", Statement.RETURN_GENERATED_KEYS);
-                stmt.setString(1, nomeMacchinetta);
+                PreparedStatement stmt = databaseConnection.prepareStatement("INSERT INTO macchinette (id, id_uni, nome) VALUES (?, ?, ?)", Statement.RETURN_GENERATED_KEYS);
+                stmt.setString(1, id);
                 stmt.setInt(2, Integer.parseInt(idUni));
+                stmt.setString(3, nomeMacchinetta);
 
                 int affectedRows = stmt.executeUpdate();
                 if (affectedRows > 0) {
-                    ResultSet generatedKeys = stmt.getGeneratedKeys();
-                    if (generatedKeys.next()) {
-                        Map<String, String> response = new HashMap<>();
-                        response.put("id", generatedKeys.getString(1));
-                        return gson.toJson(response);
-                    }
+                    res.status(HttpServletResponse.SC_OK);
+                    return gson.toJson(Map.of("message", "Università aggiunta con successo"));
+                } else {
+                    res.status(HttpServletResponse.SC_BAD_REQUEST);
+                    return gson.toJson(Map.of("error", "Errore durante l'aggiunta dell'università"));
                 }
-
-                res.status(400);
-                return gson.toJson("Errore durante l'aggiunta della macchinetta");
             });
 
+            //spark delete per rimuovere macchinette dal database
             Spark.delete("/macchinette/:id", (req, res) -> {
                 res.type("application/json");
 
@@ -165,7 +204,7 @@ public class Main {
 
                 try {
                     PreparedStatement stmt = databaseConnection.prepareStatement("DELETE FROM macchinette WHERE id = ?");
-                    stmt.setInt(1, Integer.parseInt(idMacchinetta));
+                    stmt.setString(1, idMacchinetta);
 
                     int affectedRows = stmt.executeUpdate();
                     if (affectedRows > 0) {
