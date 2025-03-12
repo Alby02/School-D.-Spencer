@@ -40,51 +40,23 @@ public class Main {
         try{
             Connection databaseConnection = DriverManager.getConnection(postgresFullUrl, postgresUser, postgresPassword);
             MqttClient mqttRemoteClient = getMqttClient(mqttUrl, databaseConnection);
+            //crea tabella macchinette e universita e guadagni
+            try {
+                Statement stmt = databaseConnection.createStatement();
+                stmt.execute("CREATE TABLE IF NOT EXISTS universita (id SERIAL PRIMARY KEY, nome TEXT NOT NULL, guadagno INT DEFAULT 0)");
+                stmt.execute("CREATE TABLE IF NOT EXISTS macchinette (id VARCHAR(10) PRIMARY KEY, id_uni INT NOT NULL, nome TEXT NOT NULL, guadagno INT DEFAULT 0, cassa_piena BOOLEAN DEFAULT FALSE, no_resto BOOLEAN DEFAULT FALSE, no_cialde BOOLEAN DEFAULT FALSE)");
+                stmt.execute("CREATE TABLE IF NOT EXISTS guadagni (id SERIAL PRIMARY KEY, id_macchinetta VARCHAR(10) NOT NULL, data DATE NOT NULL, guadagno INT NOT NULL)");
+            } catch (SQLException e) {
+                System.err.println("Errore durante la creazione delle tabelle: " + e.getMessage());
+                e.printStackTrace();
+            }
             Spark.after((request, response) -> {
                 response.header("Access-Control-Allow-Origin", "*");
                 response.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE");
                 response.header("Access-Control-Allow-Credentials", "true");
                 response.header("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Requested-With,Accept,Origin");
             });
-/*
-            Spark.before((req, res) -> {
-                System.out.println("====== Incoming Request ======");
-                System.out.println("Method: " + req.requestMethod());
-                System.out.println("URL: " + req.url());
-                System.out.println("Query Params: " + req.queryString());
-                System.out.println("Protocol: " + req.protocol());
-                System.out.println("IP: " + req.ip());
-                System.out.println("Host: " + req.host());
-                System.out.println("Port: " + req.port());
-                System.out.println("User-Agent: " + req.userAgent());
-                System.out.println("Referrer: " + req.headers("Referer"));
-                System.out.println("Content-Length: " + req.contentLength());
 
-                // Log headers
-                System.out.println("Headers:");
-                req.headers().forEach(header -> System.out.println("  " + header + ": " + req.headers(header)));
-
-                // Log cookies
-                System.out.println("Cookies:");
-                req.cookies().forEach((name, value) -> System.out.println("  " + name + ": " + value));
-
-                // Read body (only if present)
-                if (req.body() != null && !req.body().isEmpty()) {
-                    System.out.println("Body: " + req.body());
-                }
-
-                System.out.println("==============================");
-            });
-
-            Spark.after((req, res) -> {
-                System.out.println("====== Response Sent ======");
-                System.out.println("Status Code: " + res.status());
-                System.out.println("Response Headers:");
-                System.out.println("  Content-Type: " + res.type());
-                System.out.println("  Set-Cookies: " + res.raw().getHeader("Set-Cookie"));
-                System.out.println("===========================");
-            });
-*/
             Spark.before((req, res)->{
                 if (!KeycloakAuthMiddleware.authenticate(req, res))
                     Spark.halt(401, "Non autorizzato");
@@ -315,9 +287,9 @@ public class Main {
 
             //se esiste inserisci un messaggio di errore nel database
             if (pstmt.executeQuery().getInt(1) == 1) {
-                pstmt = databaseConnection.prepareStatement("INSERT INTO assistenza (macchinetta_id, messaggio) VALUES (?, ?)");
+                pstmt = databaseConnection.prepareStatement("UPDATE macchinette WHERE id = ? SET cassa_piena = ?");
                 pstmt.setInt(1, Integer.parseInt(new String(message.getPayload())));
-                pstmt.setString(2, "Cassa piena");
+                pstmt.setBoolean(2, true);
                 pstmt.executeUpdate();
             } else{
                 System.out.println("Macchinetta non trovata");
@@ -334,13 +306,37 @@ public class Main {
 
             //se esiste inserisci un messaggio di errore nel database
             if (pstmt.executeQuery().getInt(1) == 1) {
-                pstmt = databaseConnection.prepareStatement("INSERT INTO assistenza (macchinetta_id, messaggio) VALUES (?, ?)");
+                pstmt = databaseConnection.prepareStatement("UPDATE macchinette WHERE id = ? SET no_resto = ?");
                 pstmt.setInt(1, Integer.parseInt(new String(message.getPayload())));
-                pstmt.setString(2, "Resto non erogato");
+                pstmt.setBoolean(2, true);
                 pstmt.executeUpdate();
             } else{
                 System.out.println("Macchinetta non trovata");
             }
+        });
+
+        //ricevo messaggio mqtt dell'assistance contenente "id_macchinetta" - "ricavo"
+        mqttRemoteClient.subscribe("service/assistance/ricavo", (topic, message) -> {
+            String[] parts = new String(message.getPayload()).split("-");
+            System.out.println("Assistenza richiesta: " + parts[1] + " su topic " + topic);
+
+            //aggiungi riga alla tabella dei guadagni con il ricavo della macchinetta
+            PreparedStatement statement = databaseConnection.prepareStatement("INSERT INTO guadagni (id_macchinetta, data, guadagno) VALUES (?, ?, ?)");
+            statement.setString(1, parts[0]);
+            statement.setDate(2, new Date(System.currentTimeMillis()));
+            statement.setInt(3, Integer.parseInt(parts[1]));
+            statement.executeUpdate();
+
+            PreparedStatement pstmt = databaseConnection.prepareStatement("UPDATE macchinette WHERE id = ? SET guadagno = guadagno + ?");
+            pstmt.setString(1, parts[0]);
+            pstmt.setInt(2, Integer.parseInt(parts[1]));
+            pstmt.executeUpdate();
+
+            PreparedStatement statement1 = databaseConnection.prepareStatement("UPDATE universita SET guadagno = guadagno + ? WHERE id = (SELECT id_uni FROM macchinette WHERE id = ?)");
+            statement1.setInt(1, Integer.parseInt(parts[1]));
+            statement1.setString(2, parts[0]);
+            statement1.executeUpdate();
+
         });
 
         //ricevo messaggio mqtt dell'assistance per le cialde
@@ -353,9 +349,9 @@ public class Main {
 
             //se esiste inserisci un messaggio di errore nel database
             if (pstmt.executeQuery().getInt(1) == 1) {
-                pstmt = databaseConnection.prepareStatement("INSERT INTO assistenza (macchinetta_id, messaggio) VALUES (?, ?)");
+                pstmt = databaseConnection.prepareStatement("UPDATE macchinette WHERE id = ? SET no_cialde = ?");
                 pstmt.setInt(1, Integer.parseInt(new String(message.getPayload())));
-                pstmt.setString(2, "Cialde esaurite");
+                pstmt.setBoolean(2, true);
                 pstmt.executeUpdate();
             } else{
                 System.out.println("Macchinetta non trovata");

@@ -81,6 +81,16 @@ public class Main {
     private static void gestisciSvuotamentoCassa(MqttClient mqttClient, Connection databaseConnection) {
         try {
             mqttClient.subscribe("assistance/cassa/svuotamento", (topic, message) -> {
+                //manda il ricavo a assistance
+                try (Statement statement = databaseConnection.createStatement()) {
+                    ResultSet resultSet = statement.executeQuery("SELECT ricavo FROM cassa");
+                    resultSet.next();
+                    int ricavo = resultSet.getInt("ricavo");
+                    mqttClient.publish("assistance/bank/ricavo", new MqttMessage(String.valueOf(ricavo).getBytes()));
+                } catch (SQLException | MqttException e) {
+                    System.err.println("Errore durante lo svuotamento della cassa: " + e.getMessage());
+                }
+
                 try (Statement statement = databaseConnection.createStatement()) {
                     statement.executeUpdate("UPDATE cassa SET ricavo = 0, monete = 0");
                     System.out.println("Cassa svuotata con successo");

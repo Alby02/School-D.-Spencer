@@ -58,6 +58,10 @@ public class Main {
                     System.out.println("Ricarica resto: " + new String(message.getPayload()));
                     mqttLocalClient.publish("assistance/resto/ricarica", new MqttMessage("Ricarica resto".getBytes()));
                 });
+                mqttLocalClient.subscribe("assistance/bank/ricavo", (topic, message) -> {
+                    System.out.println("Ricavo: " + new String(message.getPayload()));
+                    mqttRemoteClient.publish("service/assistance/ricavo", new MqttMessage((idMacchina + "-" + message).getBytes()));
+                });
                 mqttLocalClient.subscribe("assistance/cialde", (topic, message) -> {
                     System.out.println("Bevanda: " + new String(message.getPayload()));
                     mqttRemoteClient.publish("service/assistance/cialde", new MqttMessage(idMacchina.getBytes()));
