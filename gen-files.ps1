@@ -66,7 +66,7 @@ KC_ADMIN_PASSWORD=$p
 # api keycloak
 OIDC_ISSUER=$KEYCLOAK_ISSUER
 OIDC_CLIENT_ID=api-service
-OIDC_REDIRECT_URI=https://localhost/auth/callback
+OIDC_REDIRECT_URI=https://localhost
 OIDC_CLIENT_SECRET=
 API_URL=$API_URL
 

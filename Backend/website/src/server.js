@@ -23,10 +23,10 @@ passport.use(new OpenIDConnectStrategy({
     authorizationURL: `${process.env.OIDC_ISSUER}/protocol/openid-connect/auth`,
     tokenURL: `${process.env.OIDC_ISSUER}/protocol/openid-connect/token`,
     userInfoURL: `${process.env.OIDC_ISSUER}/protocol/openid-connect/userinfo`,
-    callbackURL: process.env.OIDC_REDIRECT_URI
+    callbackURL: `${process.env.OIDC_REDIRECT_URI}/auth/callback`
 }, (issuer, profile, context, idToken, accessToken, refreshToken, done) => {
     const expiresAt = Date.now() + (context.expires_in * 1000); // Store expiration time
-    return done(null, { profile, accessToken, refreshToken, expiresAt });
+    return done(null, { profile, idToken, accessToken, refreshToken, expiresAt });
 }));
 
 passport.serializeUser((user, done) => done(null, user));
@@ -50,8 +50,18 @@ app.use(express.urlencoded({ extended: false }));
 app.get('/login', passport.authenticate('openidconnect'));
 
 app.get('/logout', (req, res) => {
-    req.logout(() => {
-        res.redirect('/');
+    console.log('Logout request received');
+    console.log('User:', req.user);
+    const keycloakLogoutUrl = `${process.env.OIDC_ISSUER}/protocol/openid-connect/logout`;
+    const LogoutUrl = keycloakLogoutUrl + 
+        `?post_logout_redirect_uri=${encodeURIComponent(process.env.OIDC_REDIRECT_URI)}` +
+        //`&client_id=${encodeURIComponent(req.user.profile.id)}` +
+        `&id_token_hint=${encodeURIComponent(req.user.idToken)}`;
+    req.logout(function(err) {
+        if (err) { return next(err); }
+        req.session.destroy(() => {
+            res.redirect(LogoutUrl);
+        });
     });
 });
 
