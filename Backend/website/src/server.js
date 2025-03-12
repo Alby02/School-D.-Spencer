@@ -4,6 +4,7 @@ const express = require('express');
 const session = require('express-session');
 const passport = require('passport');
 const OpenIDConnectStrategy = require('passport-openidconnect');
+const axios = require('axios');
 
 const app = express();
 
@@ -23,9 +24,8 @@ passport.use(new OpenIDConnectStrategy({
     tokenURL: `${process.env.OIDC_ISSUER}/protocol/openid-connect/token`,
     userInfoURL: `${process.env.OIDC_ISSUER}/protocol/openid-connect/userinfo`,
     callbackURL: process.env.OIDC_REDIRECT_URI
-}, (issuer, profile, done) => {
-    console.log("Authentication successful, token:", profile);
-    return done(null, profile);
+}, (issuer, profile, context, idToken, accessToken, refreshToken, done) => {
+    return done(null, {profile, accessToken});
 }));
 
 passport.serializeUser((user, done) => done(null, user));
@@ -45,9 +45,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 
-
 // Auth routes
-app.get('/login', passport.authenticate('openidconnect', {session: false}));
+app.get('/login', passport.authenticate('openidconnect'));
 
 app.get('/logout', (req, res) => {
     req.logout(() => {
@@ -75,6 +74,32 @@ app.get('/supportUni', (req, res) => {
 
 app.get('/supportMacchinette', (req, res) => {
     res.render('supportMacchinette');
+});
+
+caCert = fs.readFileSync('/certs/ca.crt');
+
+// api proxy routes use axios to forward the request to the API using caCert to validate the server certificate and req.user.accessToken to authorize the request
+app.all('/api/*',(req, res) => {
+    // check if user is authenticated using passport
+    if (!req.isAuthenticated()) {
+        res.status(401).json({message: 'Not authenticated user need to login'});
+        return;
+    }
+
+    const url = process.env.API_URL + req.url.replace('/api', '');
+    axios({
+        method: req.method,
+        url,
+        data: req.body,
+        headers: {
+            'Authorization': `Bearer ${req.user.accessToken}`,
+        },
+        httpsAgent: new https.Agent({ca: caCert}),
+    }).then(response => {
+        res.json(response.data);
+    }).catch(error => {
+        res.status(error.response.status).json(error.response.data);
+    });
 });
 
 // Start server

@@ -6,7 +6,7 @@ function fetchMacchinette() {
     const urlParams = new URLSearchParams(window.location.search);
     const idUni = urlParams.get("id_uni");
     
-    fetch(`http://localhost:8443/macchinette/${idUni}`)
+    fetch(`http://localhost/api/macchinette/${idUni}`)
         .then(response => {
             if (!response.ok) {
                 throw new Error("Errore nel recupero dei dati");
@@ -88,7 +88,7 @@ function addMacchinetta(idUni) {
         id_uni: idUni
     };
 
-    fetch("http://localhost:8443/macchinette", {
+    fetch("http://localhost/api/macchinette", {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
@@ -115,7 +115,7 @@ function removeMacchinetta(idMacchinetta) {
         return;
     }
 
-    fetch(`https://localhost:8443/macchinette/${idMacchinetta}`, {
+    fetch(`https://localhost/api/macchinette/${idMacchinetta}`, {
         method: "DELETE",
         headers: {
             "Content-Type": "application/json"

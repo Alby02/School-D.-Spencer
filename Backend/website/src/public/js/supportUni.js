@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 function fetchUniversities() {
-    fetch("https://localhost:443/universita")
+    fetch("https://localhost/api/universita")
         .then(response => {
             if (!response.ok) {
                 throw new Error("Errore nel recupero dei dati");
@@ -89,7 +89,7 @@ function addUniversita(idUni) {
         id: idUni
     };
 
-    fetch(`https://localhost:443/universita`, {
+    fetch(`https://localhost/api/universita`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json"

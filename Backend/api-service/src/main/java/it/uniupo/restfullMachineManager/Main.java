@@ -84,12 +84,12 @@ public class Main {
                 System.out.println("  Set-Cookies: " + res.raw().getHeader("Set-Cookie"));
                 System.out.println("===========================");
             });
-
+*/
             Spark.before((req, res)->{
                 if (!KeycloakAuthMiddleware.authenticate(req, res))
                     Spark.halt(401, "Non autorizzato");
             });
-*/
+
 
             //spark get per recuperare le informazioni universita dal database
             Spark.get("/universita", (req, res) -> {
