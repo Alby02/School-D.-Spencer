@@ -169,6 +169,9 @@ public class Main {
                     macchinetta.put("id", rs.getString("id"));
                     macchinetta.put("id_uni", rs.getInt("id_uni") + "");
                     macchinetta.put("nome", rs.getString("nome"));
+                    macchinetta.put("no_resto", rs.getBoolean("no_resto")+ "");
+                    macchinetta.put("cassa_piena", rs.getBoolean("cassa_piena")+ "");
+                    macchinetta.put("no_cialde", rs.getBoolean("no_cialde")+ "");
                     macchinette.add(macchinetta);
                 }
 
@@ -221,6 +224,32 @@ public class Main {
                     e.printStackTrace();
                     res.status(500);
                     return gson.toJson("Errore durante la rimozione della macchinetta");
+                }
+            });
+
+            //spark post per resettare tutti i valori utili a false delle macchinette dal database
+            Spark.post("/macchinette/:id/assistenza", (req, res) -> {
+                res.type("application/json");
+
+                String idMacchinetta = req.params(":id");
+
+                try {
+                    PreparedStatement stmt = databaseConnection.prepareStatement(
+                            "UPDATE macchinette SET cassa_piena = FALSE, no_resto = FALSE, no_cialde = FALSE WHERE id = ?"
+                    );
+                    stmt.setString(1, idMacchinetta);
+
+                    int affectedRows = stmt.executeUpdate();
+                    if (affectedRows > 0) {
+                        return gson.toJson("Manutenzione completata con successo");
+                    } else {
+                        res.status(404);
+                        return gson.toJson("Macchinetta non trovata");
+                    }
+                } catch (Exception e) {
+                    System.err.println("Errore nel reset della manutenzione: " + e.getMessage());
+                    res.status(500);
+                    return gson.toJson("Errore nel reset della manutenzione");
                 }
             });
 
@@ -329,7 +358,7 @@ public class Main {
 
             //se esiste inserisci un messaggio di errore nel database
             if (pstmt.executeQuery().getInt(1) == 1) {
-                pstmt = databaseConnection.prepareStatement("UPDATE macchinette WHERE id = ? SET cassa_piena = ?");
+                pstmt = databaseConnection.prepareStatement("UPDATE macchinette SET cassa_piena = ? WHERE id = ?");
                 pstmt.setInt(1, Integer.parseInt(new String(message.getPayload())));
                 pstmt.setBoolean(2, true);
                 pstmt.executeUpdate();
@@ -348,7 +377,7 @@ public class Main {
 
             //se esiste inserisci un messaggio di errore nel database
             if (pstmt.executeQuery().getInt(1) == 1) {
-                pstmt = databaseConnection.prepareStatement("UPDATE macchinette WHERE id = ? SET no_resto = ?");
+                pstmt = databaseConnection.prepareStatement("UPDATE macchinette SET no_resto = ? WHERE id = ?");
                 pstmt.setInt(1, Integer.parseInt(new String(message.getPayload())));
                 pstmt.setBoolean(2, true);
                 pstmt.executeUpdate();
@@ -369,7 +398,7 @@ public class Main {
             statement.setInt(3, Integer.parseInt(parts[1]));
             statement.executeUpdate();
 
-            PreparedStatement pstmt = databaseConnection.prepareStatement("UPDATE macchinette WHERE id = ? SET guadagno = guadagno + ?");
+            PreparedStatement pstmt = databaseConnection.prepareStatement("UPDATE macchinette SET guadagno = guadagno + ? WHERE id = ? ");
             pstmt.setString(1, parts[0]);
             pstmt.setInt(2, Integer.parseInt(parts[1]));
             pstmt.executeUpdate();
@@ -391,7 +420,7 @@ public class Main {
 
             //se esiste inserisci un messaggio di errore nel database
             if (pstmt.executeQuery().getInt(1) == 1) {
-                pstmt = databaseConnection.prepareStatement("UPDATE macchinette WHERE id = ? SET no_cialde = ?");
+                pstmt = databaseConnection.prepareStatement("UPDATE macchinette SET no_cialde = ? WHERE id = ?");
                 pstmt.setInt(1, Integer.parseInt(new String(message.getPayload())));
                 pstmt.setBoolean(2, true);
                 pstmt.executeUpdate();

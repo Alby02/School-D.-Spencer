@@ -32,13 +32,16 @@ function displayMacchinette(macchinette, idUni) {
         const uniElement = document.createElement("div");
         uniElement.classList.add("university-item");
 
+        const necessitaAssistenza = macchinetta.no_resto === "true" || macchinetta.cassa_piena === "true" || macchinetta.no_cialde === "true";
+        console.log("Dati ricevuti:", macchinetta);
         uniElement.innerHTML = `
             <div class="album-info-long">
                 <h5>${macchinetta.nome}</h5>
+                <h5>Richiede Manutenzione: ${necessitaAssistenza ? 'Sì' : 'No'}</h5>
+                ${necessitaAssistenza ? `<button class="aggiungiCancButton" onclick="resolveMaintenance('${macchinetta.id}')">Assistenza</button>` : ''}
                 <button class="aggiungiCancButton" onclick="removeMacchinetta('${macchinetta.id}')">Rimuovi</button>
             </div>
         `;
-
         albumCol.appendChild(uniElement);
         supportContainer.appendChild(albumCol);
     });
@@ -153,5 +156,24 @@ function removeMacchinetta(idMacchinetta) {
     .catch(error => {
         console.error("Errore durante la rimozione della macchinetta:", error);
         alert("Errore durante la rimozione della macchinetta.");
+    });
+}
+
+//Funzione per resettare i valori a false
+function resolveMaintenance(idMacchinetta) {
+    fetch(`https://localhost/api/macchinette/${idMacchinetta}/assistenza`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+    })
+    .then(response => {
+        if (!response.ok) throw new Error("Errore nel reset della manutenzione");
+        return response.json();
+    })
+    .then(() => {
+        alert("Manutenzione avvenuta con successo!");
+        fetchMacchinette();
+    })
+    .catch(error => {
+        console.error("Errore durante la manutenzione:", error);
     });
 }
