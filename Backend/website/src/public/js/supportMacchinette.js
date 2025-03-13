@@ -36,14 +36,14 @@ function displayMacchinette(macchinette, idUni) {
         uniElement.innerHTML = `
             <div class="album-info-long">
                 <h5>${macchinetta.nome}</h5>
-                <h5>Richiede Manutenzione: ${macchinetta.no_resto === "true" ? 'Sì' : 'No'}</h5>
-                ${macchinetta.no_resto === "true" ? `<button class="aggiungiCancButton" onclick="resolveMaintenance('${macchinetta.id}')">Assistenza</button>` : ''}
-                <h5>Richiede Manutenzione: ${macchinetta.cassa_piena === "true" ? 'Sì' : 'No'}</h5>
-                ${macchinetta.cassa_piena === "true" ? `<button class="aggiungiCancButton" onclick="resolveMaintenance('${macchinetta.id}')">Assistenza</button>` : ''}
-                <h5>Richiede Manutenzione: ${macchinetta.no_cialde === "true" ? 'Sì' : 'No'}</h5>
-                ${macchinetta.no_cialde === "true" ? `<button class="aggiungiCancButton" onclick="resolveMaintenance('${macchinetta.id}')">Assistenza</button>` : ''}
-                <h5>Richiede Manutenzione: ${macchinetta.rotta === "true" ? 'Sì' : 'No'}</h5>
-                ${macchinetta.rotta === "true" ? `<button class="aggiungiCancButton" onclick="resolveMaintenance('${macchinetta.id}')">Assistenza</button>` : ''}
+                <h5>Manutenzione Resto: ${macchinetta.no_resto === "true" ? 'Sì' : 'No'}</h5>
+                ${macchinetta.no_resto === "true" ? `<button class="aggiungiCancButton" onclick="resolveResto('${macchinetta.id}')">Assistenza Resto</button>` : ''}
+                <h5>Manutenzione Cassa: ${macchinetta.cassa_piena === "true" ? 'Sì' : 'No'}</h5>
+                ${macchinetta.cassa_piena === "true" ? `<button class="aggiungiCancButton" onclick="resolveCassa('${macchinetta.id}')">Assistenza Cassa</button>` : ''}
+                <h5>Manutenzione Cialde: ${macchinetta.no_cialde === "true" ? 'Sì' : 'No'}</h5>
+                ${macchinetta.no_cialde === "true" ? `<button class="aggiungiCancButton" onclick="resolveCialde('${macchinetta.id}')">Assistenza Cialde</button>` : ''}
+                <h5>Manutenzione Guasto: ${macchinetta.rotta === "true" ? 'Sì' : 'No'}</h5>
+                ${macchinetta.rotta === "true" ? `<button class="aggiungiCancButton" onclick="resolveGuasto('${macchinetta.id}')">Assistenza Guasto</button>` : ''}
                 <button class="aggiungiCancButton" onclick="removeMacchinetta('${macchinetta.id}')">Rimuovi</button>
             </div>
         `;
@@ -161,5 +161,97 @@ function removeMacchinetta(idMacchinetta) {
     .catch(error => {
         console.error("Errore durante la rimozione della macchinetta:", error);
         alert("Errore durante la rimozione della macchinetta.");
+    });
+}
+
+//Aggiorna resto database
+function resolveResto(idMacchinetta) {
+    fetch("https://localhost/api/assistenza/resto", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ "id_macchina": idMacchinetta })
+    })
+    .then(response => {
+        if (response.ok) {
+            alert("Manutenzione per il resto completata con successo!");
+            fetchMacchinette();
+        } else {
+            alert("Errore nell'assistenza per il resto.");
+        }
+    })
+    .catch(error => {
+        console.error("Errore durante la richiesta di assistenza per il resto:", error);
+        alert("Errore durante la richiesta di assistenza per il resto.");
+    });
+}
+
+//Aggiorna Cassa database
+function resolveCassa(idMacchinetta) {
+    fetch("https://localhost/api/assistenza/cassa", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ "id_macchina": idMacchinetta })
+    })
+    .then(response => {
+        if (response.ok) {
+            alert("Manutenzione per la cassa completata con successo!");
+            fetchMacchinette();
+        } else {
+            alert("Errore nell'assistenza per il la cassa.");
+        }
+    })
+    .catch(error => {
+        console.error("Errore durante la richiesta di assistenza per la cassa:", error);
+        alert("Errore durante la richiesta di assistenza per la cassa.");
+    });
+}
+
+//Aggiorna Cialde database
+function resolveCialde(idMacchinetta) {
+    fetch("https://localhost/api/assistenza/cialde", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ "id_macchina": idMacchinetta })
+    })
+    .then(response => {
+        if (response.ok) {
+            alert("Manutenzione per le cialde completata con successo!");
+            fetchMacchinette();
+        } else {
+            alert("Errore nell'assistenza per le cialde.");
+        }
+    })
+    .catch(error => {
+        console.error("Errore durante la richiesta di assistenza per le cialde:", error);
+        alert("Errore durante la richiesta di assistenza per le cialde.");
+    });
+}
+
+//Aggiorna Rotta database
+function resolveGuasto(idMacchinetta) {
+    fetch("https://localhost/api/assistenza/guasto", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ "id_macchina": idMacchinetta })
+    })
+    .then(response => {
+        if (response.ok) {
+            alert("Manutenzione per il guasto completata con successo!");
+            fetchMacchinette();
+        } else {
+            alert("Errore nell'assistenza per il guasto.");
+        }
+    })
+    .catch(error => {
+        console.error("Errore durante la richiesta di assistenza per il guasto:", error);
+        alert("Errore durante la richiesta di assistenza per il guasto.");
     });
 }
