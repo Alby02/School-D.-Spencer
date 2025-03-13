@@ -7,6 +7,7 @@ import com.google.gson.Gson;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import jakarta.servlet.http.HttpServletResponse;
@@ -45,7 +46,7 @@ public class Main {
             try {
                 Statement stmt = databaseConnection.createStatement();
                 stmt.execute("CREATE TABLE IF NOT EXISTS universita (id SERIAL PRIMARY KEY, nome TEXT NOT NULL, guadagno INT DEFAULT 0)");
-                stmt.execute("CREATE TABLE IF NOT EXISTS macchinette (id VARCHAR(10) PRIMARY KEY, id_uni INT NOT NULL, nome TEXT NOT NULL, guadagno INT DEFAULT 0, cassa_piena BOOLEAN DEFAULT FALSE, no_resto BOOLEAN DEFAULT FALSE, no_cialde BOOLEAN DEFAULT FALSE, FOREIGN KEY (id_uni) REFERENCES universita(id))");
+                stmt.execute("CREATE TABLE IF NOT EXISTS macchinette (id VARCHAR(10) PRIMARY KEY, id_uni INT NOT NULL, nome TEXT NOT NULL, guadagno INT DEFAULT 0, cassa_piena BOOLEAN DEFAULT FALSE, no_resto BOOLEAN DEFAULT FALSE, no_cialde BOOLEAN DEFAULT FALSE, rotta BOOLEAN DEFAULT FALSE, FOREIGN KEY (id_uni) REFERENCES universita(id))");
                 stmt.execute("CREATE TABLE IF NOT EXISTS guadagni (id SERIAL PRIMARY KEY, id_macchinetta VARCHAR(10) NOT NULL, data DATE NOT NULL, guadagno INT NOT NULL)");
             } catch (SQLException e) {
                 System.err.println("Errore durante la creazione delle tabelle: " + e.getMessage());
@@ -73,31 +74,39 @@ public class Main {
 
             //spark get per recuperare le informazioni universita dal database
             Spark.get("/universita", (req, res) -> {
-                try {
-                    res.type("application/json");
-                    ArrayList<HashMap<String, String>> universita = new ArrayList<>();
+                res.type("application/json");
 
-                    Statement stmt = databaseConnection.createStatement();
-                    ResultSet rs = stmt.executeQuery("SELECT * FROM universita");
+                List<String> roles = req.attribute("roles");
 
-                    while (rs.next()) {
-                        HashMap<String, String> uni = new HashMap<>();
-                        uni.put("id", rs.getInt("id") + "");
-                        uni.put("nome", rs.getString("nome"));
-                        universita.add(uni);
-                    }
-                    return new Gson().toJson(universita);
+                if (roles == null || !roles.contains("manager")) {
+                    res.status(403);
+                    return gson.toJson(Map.of("message", "Accesso negato: Solo un amministratore può rimuovere un'università."));
                 }
-                catch (Exception e) {
-                    System.err.println("Errore " + e.getMessage());
-                    e.printStackTrace();
-                    throw e;
+
+                ArrayList<HashMap<String, String>> universita = new ArrayList<>();
+
+                Statement stmt = databaseConnection.createStatement();
+                ResultSet rs = stmt.executeQuery("SELECT * FROM universita");
+
+                while (rs.next()) {
+                    HashMap<String, String> uni = new HashMap<>();
+                    uni.put("id", rs.getInt("id") + "");
+                    uni.put("nome", rs.getString("nome"));
+                    universita.add(uni);
                 }
+                return new Gson().toJson(universita);
             });
 
             //spark get per recuperare le informazioni macchinette dal database
             Spark.post("/universita", (req, res) -> {
                 res.type("application/json");
+
+                List<String> roles = req.attribute("roles");
+
+                if (roles == null || !roles.contains("admin")) {
+                    res.status(403);
+                    return gson.toJson(Map.of("message", "Accesso negato: Solo un amministratore può rimuovere un'università."));
+                }
 
                 Map<String, String> body = gson.fromJson(req.body(), Map.class);
                 String nomeUniversita = body.get("nome");
@@ -119,9 +128,16 @@ public class Main {
                 return gson.toJson("Errore durante l'aggiunta dell'universita");
             });
 
-            //spark delete per rimuovere universita dal database con controllo presenza macchinette
+            //spark delete per rimuovere universita dal database con controllo presenza macchinette e amministratore
             Spark.delete("/universita/:id", (req, res) -> {
                 res.type("application/json");
+
+                List<String> roles = req.attribute("roles");
+
+                if (roles == null || !roles.contains("admin")) {
+                    res.status(403);
+                    return gson.toJson(Map.of("message", "Accesso negato: Solo un amministratore può rimuovere un'università."));
+                }
 
                 String idUniversita = req.params(":id");
 
@@ -157,6 +173,14 @@ public class Main {
             //spark get per recuperare le informazioni macchinette dal database
             Spark.get("/macchinette/:id", (req, res) -> {
                 res.type("application/json");
+
+                List<String> roles = req.attribute("roles");
+
+                if (roles == null || !roles.contains("manager")) {
+                    res.status(403);
+                    return gson.toJson(Map.of("message", "Accesso negato: Solo un amministratore può rimuovere un'università."));
+                }
+
                 ArrayList<HashMap<String, String>> macchinette = new ArrayList<>();
                 String uniId = req.params(":id");
 
@@ -172,6 +196,7 @@ public class Main {
                     macchinetta.put("no_resto", rs.getBoolean("no_resto")+ "");
                     macchinetta.put("cassa_piena", rs.getBoolean("cassa_piena")+ "");
                     macchinetta.put("no_cialde", rs.getBoolean("no_cialde")+ "");
+                    macchinetta.put("rotta", rs.getBoolean("rotta")+ "");
                     macchinette.add(macchinetta);
                 }
 
@@ -181,6 +206,13 @@ public class Main {
             //spark post per aggiungere macchinette nel database
             Spark.post("/macchinette", (req, res) -> {
                 res.type("application/json");
+
+                List<String> roles = req.attribute("roles");
+
+                if (roles == null || !roles.contains("admin")) {
+                    res.status(403);
+                    return gson.toJson(Map.of("message", "Accesso negato: Solo un amministratore può rimuovere un'università."));
+                }
 
                 Map<String, String> body = gson.fromJson(req.body(), Map.class);
                 String id = body.get("id");
@@ -206,6 +238,13 @@ public class Main {
             Spark.delete("/macchinette/:id", (req, res) -> {
                 res.type("application/json");
 
+                List<String> roles = req.attribute("roles");
+
+                if (roles == null || !roles.contains("admin")) {
+                    res.status(403);
+                    return gson.toJson(Map.of("message", "Accesso negato: Solo un amministratore può rimuovere un'università."));
+                }
+
                 String idMacchinetta = req.params(":id");
 
                 try {
@@ -227,32 +266,6 @@ public class Main {
                 }
             });
 
-            //spark post per resettare tutti i valori utili a false delle macchinette dal database
-            Spark.post("/macchinette/:id/assistenza", (req, res) -> {
-                res.type("application/json");
-
-                String idMacchinetta = req.params(":id");
-
-                try {
-                    PreparedStatement stmt = databaseConnection.prepareStatement(
-                            "UPDATE macchinette SET cassa_piena = FALSE, no_resto = FALSE, no_cialde = FALSE WHERE id = ?"
-                    );
-                    stmt.setString(1, idMacchinetta);
-
-                    int affectedRows = stmt.executeUpdate();
-                    if (affectedRows > 0) {
-                        return gson.toJson("Manutenzione completata con successo");
-                    } else {
-                        res.status(404);
-                        return gson.toJson("Macchinetta non trovata");
-                    }
-                } catch (Exception e) {
-                    System.err.println("Errore nel reset della manutenzione: " + e.getMessage());
-                    res.status(500);
-                    return gson.toJson("Errore nel reset della manutenzione");
-                }
-            });
-
             //spark post per inviare il messaggio ad assistance per la ricarica delle cialde
             Spark.post("assistenza/cialde", (req, res) -> {
                 res.type("application/json");
@@ -270,6 +283,20 @@ public class Main {
                 try {
                     mqttRemoteClient.publish("assistance/cialde/ricarica", new MqttMessage(idMacchina.getBytes()));
                     System.out.println("Messaggio di ricarica inviato per la macchina " + idMacchina);
+
+                    PreparedStatement stmt = databaseConnection.prepareStatement(
+                            "UPDATE macchinette SET no_cialde = FALSE WHERE id = ?"
+                    );
+                    stmt.setString(1, idMacchina);
+
+                    int affectedRows = stmt.executeUpdate();
+                    if (affectedRows > 0) {
+                        System.out.println("Stato della macchinetta aggiornato con successo.");
+                    } else {
+                        System.err.println("Macchinetta non trovata per l'aggiornamento.");
+                        res.status(404);
+                        return gson.toJson("Macchinetta non trovata");
+                    }
                 } catch (MqttException e) {
                     System.err.println("Errore nell'invio del messaggio MQTT: " + e.getMessage());
                     res.status(500);
@@ -296,6 +323,20 @@ public class Main {
                 try {
                     mqttRemoteClient.publish("assistance/resto/ricarica", new MqttMessage(idMacchina.getBytes()));
                     System.out.println("Messaggio di assistenza per il resto inviato per la macchina " + idMacchina);
+
+                    PreparedStatement stmt = databaseConnection.prepareStatement(
+                            "UPDATE macchinette SET no_resto = FALSE WHERE id = ?"
+                    );
+                    stmt.setString(1, idMacchina);
+
+                    int affectedRows = stmt.executeUpdate();
+                    if (affectedRows > 0) {
+                        System.out.println("Stato della macchinetta aggiornato con successo.");
+                    } else {
+                        System.err.println("Macchinetta non trovata per l'aggiornamento.");
+                        res.status(404);
+                        return gson.toJson("Macchinetta non trovata");
+                    }
                 } catch (MqttException e) {
                     System.err.println("Errore nell'invio del messaggio MQTT: " + e.getMessage());
                     res.status(500);
@@ -322,6 +363,20 @@ public class Main {
                 try {
                     mqttRemoteClient.publish("assistance/cassa/svuotamento", new MqttMessage(idMacchina.getBytes()));
                     System.out.println("Messaggio di assistenza per la cassa inviato per la macchina " + idMacchina);
+
+                    PreparedStatement stmt = databaseConnection.prepareStatement(
+                            "UPDATE macchinette SET cassa_piena = FALSE WHERE id = ?"
+                    );
+                    stmt.setString(1, idMacchina);
+
+                    int affectedRows = stmt.executeUpdate();
+                    if (affectedRows > 0) {
+                        System.out.println("Stato della macchinetta aggiornato con successo.");
+                    } else {
+                        System.err.println("Macchinetta non trovata per l'aggiornamento.");
+                        res.status(404);
+                        return gson.toJson("Macchinetta non trovata");
+                    }
                 } catch (MqttException e) {
                     System.err.println("Errore nell'invio del messaggio MQTT: " + e.getMessage());
                     res.status(500);
@@ -330,6 +385,47 @@ public class Main {
 
                 return gson.toJson("Richiesta inviata con successo");
             });
+
+            //spark post per inviare il messaggio ad assistance per il guasto
+            Spark.post("assistenza/guasto", (req, res) -> {
+                res.type("application/json");
+
+                Map<String, String> body = gson.fromJson(req.body(), Map.class);
+                String idMacchina = body.get("id_macchina");
+
+                if (idMacchina == null) {
+                    res.status(400);
+                    return gson.toJson("Errore: ID macchinetta non fornito");
+                }
+
+                System.out.println("Richiesta di assistenza per la cassa segnalata per la macchina: " + idMacchina);
+
+                try {
+                    mqttRemoteClient.publish("assistance/guasto/riparazione", new MqttMessage(idMacchina.getBytes()));
+                    System.out.println("Messaggio di assistenza per il guasto inviato per la macchina " + idMacchina);
+
+                    PreparedStatement stmt = databaseConnection.prepareStatement(
+                            "UPDATE macchinette SET rotta = FALSE WHERE id = ?"
+                    );
+                    stmt.setString(1, idMacchina);
+
+                    int affectedRows = stmt.executeUpdate();
+                    if (affectedRows > 0) {
+                        System.out.println("Stato della macchinetta aggiornato con successo.");
+                    } else {
+                        System.err.println("Macchinetta non trovata per l'aggiornamento.");
+                        res.status(404);
+                        return gson.toJson("Macchinetta non trovata");
+                    }
+                } catch (MqttException e) {
+                    System.err.println("Errore nell'invio del messaggio MQTT: " + e.getMessage());
+                    res.status(500);
+                    return gson.toJson("Errore nell'invio del messaggio");
+                }
+
+                return gson.toJson("Richiesta inviata con successo");
+            });
+
         }catch (Exception e){
             System.err.println("Errore " + e.getMessage());
             e.printStackTrace();
@@ -359,8 +455,8 @@ public class Main {
             //se esiste inserisci un messaggio di errore nel database
             if (pstmt.executeQuery().getInt(1) == 1) {
                 pstmt = databaseConnection.prepareStatement("UPDATE macchinette SET cassa_piena = ? WHERE id = ?");
-                pstmt.setInt(1, Integer.parseInt(new String(message.getPayload())));
-                pstmt.setBoolean(2, true);
+                pstmt.setBoolean(1, true);
+                pstmt.setString(2, new String(message.getPayload()));
                 pstmt.executeUpdate();
             } else{
                 System.out.println("Macchinetta non trovata");
@@ -378,8 +474,8 @@ public class Main {
             //se esiste inserisci un messaggio di errore nel database
             if (pstmt.executeQuery().getInt(1) == 1) {
                 pstmt = databaseConnection.prepareStatement("UPDATE macchinette SET no_resto = ? WHERE id = ?");
-                pstmt.setInt(1, Integer.parseInt(new String(message.getPayload())));
-                pstmt.setBoolean(2, true);
+                pstmt.setBoolean(1, true);
+                pstmt.setString(2, new String(message.getPayload()));
                 pstmt.executeUpdate();
             } else{
                 System.out.println("Macchinetta non trovata");
@@ -421,13 +517,33 @@ public class Main {
             //se esiste inserisci un messaggio di errore nel database
             if (pstmt.executeQuery().getInt(1) == 1) {
                 pstmt = databaseConnection.prepareStatement("UPDATE macchinette SET no_cialde = ? WHERE id = ?");
-                pstmt.setInt(1, Integer.parseInt(new String(message.getPayload())));
-                pstmt.setBoolean(2, true);
+                pstmt.setBoolean(1, true);
+                pstmt.setString(2, new String(message.getPayload()));
                 pstmt.executeUpdate();
             } else{
                 System.out.println("Macchinetta non trovata");
             }
         });
+
+        //ricevo messaggio mqtt dell'assistance per il guasto
+        mqttRemoteClient.subscribe("service/assistance/guasto", (topic, message) -> {
+            System.out.println("Assistenza richiesta: " + new String(message.getPayload()) + " su topic " + topic);
+
+            //controlla se la macchinetta esiste nella tabella "macchinette"
+            PreparedStatement pstmt = databaseConnection.prepareStatement("SELECT COUNT(*) FROM macchinette WHERE id = ?");
+            pstmt.setInt(1, Integer.parseInt(new String(message.getPayload())));
+
+            //se esiste inserisci un messaggio di errore nel database
+            if (pstmt.executeQuery().getInt(1) == 1) {
+                pstmt = databaseConnection.prepareStatement("UPDATE macchinette SET rotta = ? WHERE id = ?");
+                pstmt.setBoolean(1, true);
+                pstmt.setString(2, new String(message.getPayload()));
+                pstmt.executeUpdate();
+            } else{
+                System.out.println("Macchinetta non trovata");
+            }
+        });
+
         return mqttRemoteClient;
     }
 

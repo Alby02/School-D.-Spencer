@@ -70,12 +70,15 @@ public class Main {
                     System.out.println("Ricarica cialde: " + new String(message.getPayload()));
                     mqttLocalClient.publish("assistance/cialde/ricarica", new MqttMessage("Ricarica cialde".getBytes()));
                 });
+                mqttRemoteClient.subscribe("assistance/guasto/riparazione", (topic, message) -> {
+                    System.out.println("Ripara Macchinetta: " + new String(message.getPayload()));
+                });
 
 
                 //thread scassa macchina
                 while (true) {
                     Thread.sleep(1000 * 60 * 5);
-                    mqttRemoteClient.publish("assistance/" + idMacchina, new MqttMessage("Scassaie".getBytes()));
+                    mqttRemoteClient.publish("service/assistance/guasto", new MqttMessage(idMacchina.getBytes()));
                 }
             } catch (MqttException e) {
                 System.err.println("Errore MQTT: " + e.getMessage());

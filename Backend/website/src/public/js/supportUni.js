@@ -85,7 +85,7 @@ function cancelUniversita() {
     }
 
     if (addUniButton) {
-        addUniButton.style.display = "block"; // Riappare il pulsante
+        addUniButton.style.display = "block";
     }
 }
 

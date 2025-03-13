@@ -5,6 +5,7 @@ const session = require('express-session');
 const passport = require('passport');
 const OpenIDConnectStrategy = require('passport-openidconnect');
 const axios = require('axios');
+const jwt = require('jsonwebtoken');
 
 const httpsAgent = new https.Agent({
     ca: fs.readFileSync('/certs/ca.crt'),
@@ -28,7 +29,6 @@ passport.use(new OpenIDConnectStrategy({
     tokenURL: `${process.env.OIDC_ISSUER}/protocol/openid-connect/token`,
     userInfoURL: `${process.env.OIDC_ISSUER}/protocol/openid-connect/userinfo`,
     callbackURL: `${process.env.OIDC_REDIRECT_URI}/auth/callback`,
-    scope: 'roles',
     agent: httpsAgent,
 }, (issuer, profile, context, idToken, accessToken, refreshToken, done) => {
     console.log("Authenticated user:", profile);
@@ -52,6 +52,51 @@ app.use(express.static(__dirname + '/public'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+async function refreshAccessToken(user) {
+    if (!user.refreshToken) {
+        throw new Error("No refresh token available");
+    }
+
+    const tokenURL = `${process.env.OIDC_ISSUER}/protocol/openid-connect/token`;
+
+    try {
+        const response = await axios.post(tokenURL, new URLSearchParams({
+            grant_type: 'refresh_token',
+            client_id: process.env.OIDC_CLIENT_ID,
+            client_secret: process.env.OIDC_CLIENT_SECRET,
+            refresh_token: user.refreshToken
+        }), {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            httpsAgent: httpsAgent
+        });
+
+        // Update user session
+        user.accessToken = response.data.access_token;
+        user.expiresAt = Date.now() + (response.data.expires_in * 1000);
+        user.refreshToken = response.data.refresh_token || user.refreshToken;
+    } catch (error) {
+        console.error("Failed to refresh access token:", error.response?.data || error.message);
+        throw new Error("Failed to refresh access token");
+    }
+}
+
+//middleware per assicurare che l'utente è autenticato e il token è aggiornato
+async function ensureAuthenticated(req, res, next) {
+    if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Not authenticated, please log in' });
+    }
+
+    try {
+        // Check if access token is expired
+        if (Date.now() >= req.user.expiresAt) {
+            console.log("Access token expired, refreshing...");
+            await refreshAccessToken(req.user);
+        }
+        next();
+    } catch (error) {
+        return res.status(401).json({ message: 'Failed to refresh access token, please log in again' });
+    }
+}
 
 // Auth routes
 app.get('/login', passport.authenticate('openidconnect'));
@@ -83,70 +128,18 @@ app.get('/home', (req, res) => {
     res.render('home');
 });
 
-app.get('/supportUni', (req, res) => {
-    if (!req.isAuthenticated()) {
-        res.redirect('/login');
-        return;
-    }
-    res.render('supportUni');
+app.get('/supportUni', ensureAuthenticated, (req, res) => {
+    const decodedJWT = jwt.decode(req.user.accessToken)
+    res.render('supportUni', { roles: decodedJWT.realm_access.roles });
 });
 
-app.get('/supportMacchinette', (req, res) => {
-    if (!req.isAuthenticated()) {
-        res.redirect('/login');
-        return;
-    }
-    res.render('supportMacchinette');
+app.get('/supportMacchinette', ensureAuthenticated, (req, res) => {
+    const decodedJWT = jwt.decode(req.user.accessToken)
+    res.render('supportMacchinette', { roles: decodedJWT.realm_access.roles });
 });
-
-async function refreshAccessToken(user) {
-    if (!user.refreshToken) {
-        throw new Error("No refresh token available");
-    }
-
-    const tokenURL = `${process.env.OIDC_ISSUER}/protocol/openid-connect/token`;
-
-    try {
-        const response = await axios.post(tokenURL, new URLSearchParams({
-            grant_type: 'refresh_token',
-            client_id: process.env.OIDC_CLIENT_ID,
-            client_secret: process.env.OIDC_CLIENT_SECRET,
-            refresh_token: user.refreshToken
-        }), {
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            httpsAgent: httpsAgent
-        });
-
-        // Update user session
-        user.accessToken = response.data.access_token;
-        user.expiresAt = Date.now() + (response.data.expires_in * 1000);
-        user.refreshToken = response.data.refresh_token || user.refreshToken;
-    } catch (error) {
-        console.error("Failed to refresh access token:", error.response?.data || error.message);
-        throw new Error("Failed to refresh access token");
-    }
-}
 
 // api proxy routes use axios to forward the request to the API using caCert to validate 
 // the server certificate and req.user.accessToken to authorize the request
-
-async function ensureAuthenticated(req, res, next) {
-    if (!req.isAuthenticated()) {
-        return res.status(401).json({ message: 'Not authenticated, please log in' });
-    }
-
-    try {
-        // Check if access token is expired
-        if (Date.now() >= req.user.expiresAt) {
-            console.log("Access token expired, refreshing...");
-            await refreshAccessToken(req.user);
-        }
-        next();
-    } catch (error) {
-        return res.status(401).json({ message: 'Failed to refresh access token, please log in again' });
-    }
-}
-
 app.all('/api/*', ensureAuthenticated, async (req, res) => {
     try {
         const url = process.env.API_URL + req.url.replace('/api', '');
