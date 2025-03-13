@@ -117,14 +117,21 @@ services:
             - KC_DB_PASSWORD=${KC_DB_PASSWORD}
             - KEYCLOAK_ADMIN=${KC_ADMIN}
             - KEYCLOAK_ADMIN_PASSWORD=${KC_ADMIN_PASSWORD}
+            - KC_HOSTNAME=${KC_HOSTNAME}
+            - KC_HOSTNAME_STRICT=false
+            - KC_HTTPS_CERTIFICATE_FILE=/etc/x509/https/tls.crt
+            - KC_HTTPS_CERTIFICATE_KEY_FILE=/etc/x509/https/tls.key
+        volumes:
+            - ./certs/keycloak-https/keycloak-https.crt:/etc/x509/https/tls.crt
+            - ./certs/keycloak-https/keycloak-https.key:/etc/x509/https/tls.key
         ports:
-            - "8080:8080"
+            - "8080:8443"
         networks:
             - keycloak-postgres-network  # Network between Keycloak and PostgreSQL
         depends_on:
             postgres-keycloak:
                 condition: service_healthy
-        command: start-dev
+        command: start
 
 
 networks:

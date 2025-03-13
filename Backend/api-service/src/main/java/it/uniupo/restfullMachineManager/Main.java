@@ -60,8 +60,11 @@ public class Main {
 
             //Token autetication Keycloak
             Spark.before((req, res)->{
-                if (!KeycloakAuthMiddleware.authenticate(req, res))
+                if (!KeycloakAuthMiddleware.authenticate(req, res)) {
+                    System.out.println("Non autorizzato");
                     Spark.halt(401, "Non autorizzato");
+                }
+                System.out.println("Request authorized");
             });
 
             Spark.exception(Exception.class, (e, request, response) ->{

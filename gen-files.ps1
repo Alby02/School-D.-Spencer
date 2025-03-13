@@ -30,7 +30,7 @@ if ($ipAddresses.Count -gt 1) {
 
 # Ensure the MQTT_URL_REMOTE is formatted correctly
 $MQTT_URL_REMOTE = "ssl://" + $localIP + ":8883"
-$KEYCLOAK_ISSUER = "http://" + $localIP + ":8080/realms/School-D.Spencer"
+$KEYCLOAK_ISSUER = "https://" + $localIP + ":8080/realms/School-D.Spencer"
 $API_URL = "https://" + $localIP + ":8443"
 
 # Define the .env file content
@@ -62,6 +62,7 @@ KC_DB_USERNAME=keycloak
 KC_DB_PASSWORD=$p
 KC_ADMIN=admin
 KC_ADMIN_PASSWORD=$p
+KC_HOSTNAME=$localIP
 
 # api keycloak
 OIDC_ISSUER=$KEYCLOAK_ISSUER
@@ -117,7 +118,8 @@ $CERTS = $(
 	@{ name = "broker-mqtt"; subject = "/C=US/ST=State/L=City/O=MyOrg/OU=MQTT/CN=$localIP"; properName = "IP:$localIP"; san = "IP:$localIP"},
 	@{ name = "api-mqtt"; subject = "/C=US/ST=State/L=City/O=MyOrg/OU=MQTT/CN=api-service"; properName = "api-service"},
 	@{ name = "api-https"; subject = "/C=US/ST=State/L=City/O=MyOrg/OU=HTTPS/CN=localhost"; properName = "localhost"; san = "IP:$localIP"},
-	@{ name = "web-https"; subject = "/C=US/ST=State/L=City/O=MyOrg/OU=HTTPS/CN=localhost"; properName = "localhost"; san = "IP:$localIP"}
+	@{ name = "web-https"; subject = "/C=US/ST=State/L=City/O=MyOrg/OU=HTTPS/CN=localhost"; properName = "localhost"; san = "IP:$localIP"},
+	@{ name = "keycloak-https"; subject = "/C=US/ST=State/L=City/O=MyOrg/OU=HTTPS/CN=$localIP"; properName = "IP:$localIP"; san = "IP:$localIP"}
 )
 
 $SAN_TEMPLATE = @"

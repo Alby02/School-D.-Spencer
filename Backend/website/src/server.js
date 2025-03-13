@@ -6,11 +6,15 @@ const passport = require('passport');
 const OpenIDConnectStrategy = require('passport-openidconnect');
 const axios = require('axios');
 
+const httpsAgent = new https.Agent({
+    ca: fs.readFileSync('/certs/ca.crt'),
+});
+
 const app = express();
 
 // Session Setup
 app.use(session({
-    secret: 'super-secret',
+    secret: 'This is my super secret key that nobody should know and nobody should be able to guess i\'m to lazy to make it a .env variable so i\'m just gonna leave it here in plain text and hope nobody finds it and uses it to steal my session data and impersonate me on my own website but i\'m sure it\'ll be fine right? right? what could possibly go wrong? right?',
     resave: false,
     saveUninitialized: true
 }));
@@ -23,8 +27,11 @@ passport.use(new OpenIDConnectStrategy({
     authorizationURL: `${process.env.OIDC_ISSUER}/protocol/openid-connect/auth`,
     tokenURL: `${process.env.OIDC_ISSUER}/protocol/openid-connect/token`,
     userInfoURL: `${process.env.OIDC_ISSUER}/protocol/openid-connect/userinfo`,
-    callbackURL: `${process.env.OIDC_REDIRECT_URI}/auth/callback`
+    callbackURL: `${process.env.OIDC_REDIRECT_URI}/auth/callback`,
+    scope: 'roles',
+    agent: httpsAgent,
 }, (issuer, profile, context, idToken, accessToken, refreshToken, done) => {
+    console.log("Authenticated user:", profile);
     const expiresAt = Date.now() + (context.expires_in * 1000); // Store expiration time
     return done(null, { profile, idToken, accessToken, refreshToken, expiresAt });
 }));
@@ -92,8 +99,6 @@ app.get('/supportMacchinette', (req, res) => {
     res.render('supportMacchinette');
 });
 
-caCert = fs.readFileSync('/certs/ca.crt');
-
 async function refreshAccessToken(user) {
     if (!user.refreshToken) {
         throw new Error("No refresh token available");
@@ -108,7 +113,8 @@ async function refreshAccessToken(user) {
             client_secret: process.env.OIDC_CLIENT_SECRET,
             refresh_token: user.refreshToken
         }), {
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            httpsAgent: httpsAgent
         });
 
         // Update user session
@@ -151,7 +157,7 @@ app.all('/api/*', ensureAuthenticated, async (req, res) => {
             headers: {
                 'Authorization': `Bearer ${req.user.accessToken}`,
             },
-            httpsAgent: new https.Agent({ ca: caCert }),
+            httpsAgent: httpsAgent,
         });
 
         res.json(response.data);
