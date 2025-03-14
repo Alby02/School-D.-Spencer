@@ -172,12 +172,7 @@ public class Main {
         mqttClient.subscribe("issuer/bevanda", (topic, message) -> {
             String idBevanda = new String(message.getPayload());
             try {
-                if (erogaBevanda(databaseConnection, idBevanda, mqttClient)) {
-                    System.out.println("Bevanda erogata con successo!");
-                    mqttClient.publish("manager/bevanda", new MqttMessage("Erogazione avvenuta con successo".getBytes()));
-                } else {
-                    mqttClient.publish("manager/bevanda", new MqttMessage("Gnoooooooooo bevanda non erogata".getBytes()));
-                }
+                erogaBevanda(databaseConnection, idBevanda, mqttClient);
             } catch (SQLException e) {
                 System.err.println("Errore durante l'elaborazione della bevanda: " + e.getMessage());
             }
@@ -201,10 +196,10 @@ public class Main {
 
     }
 
-    private static boolean erogaBevanda(Connection databaseConnection, String idBevanda, MqttClient mqttClient) throws SQLException, MqttException {
+    private static void erogaBevanda(Connection databaseConnection, String idBevanda, MqttClient mqttClient) throws SQLException, MqttException {
         // Verifica se la bevanda è erogabile
         if (!isBevandaErogabile(databaseConnection, idBevanda, mqttClient)) {
-            return false;
+            return;
         }
 
         // Aggiorna il database e decrementa le cialde utilizzate
@@ -234,8 +229,8 @@ public class Main {
                 }
             }
         }
-
-        return true;
+        System.out.println("Bevanda erogata con successo!");
+        mqttClient.publish("manager/bevanda", new MqttMessage("Successo".getBytes()));
     }
 
     private static boolean isBevandaErogabile(Connection databaseConnection, String idBevanda, MqttClient mqttClient) throws SQLException, MqttException {

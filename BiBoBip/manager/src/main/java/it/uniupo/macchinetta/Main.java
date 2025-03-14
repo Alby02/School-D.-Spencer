@@ -27,6 +27,7 @@ public class Main {
 
             mqttClient.subscribe("keypad/bevanda", (topic, message) -> handleBeverageSelection(mqttClient, selectedBeverage, message));
             mqttClient.subscribe("bank/risposta", (topic, message) -> handleBankResponse(mqttClient, databaseConnection, selectedBeverage, message));
+            mqttClient.subscribe("manager/bevanda", (topic, message) -> handleSendRequestToBank(mqttClient, databaseConnection, selectedBeverage));
 
             keepRunning();
 
@@ -74,10 +75,18 @@ public class Main {
             if (Integer.parseInt(credit) >= price) {
                 System.out.println("Credito sufficiente");
                 mqttClient.publish("issuer/bevanda", new MqttMessage(selectedBeverage.get().getBytes()));
-                mqttClient.publish("bank/request", new MqttMessage(String.valueOf(price).getBytes()));
             } else {
                 System.out.println("Credito insufficiente");
             }
+        } catch (SQLException | MqttException e) {
+            System.err.println("Errore durante l'elaborazione della bevanda: " + e.getMessage());
+        }
+    }
+
+    private static void handleSendRequestToBank(MqttClient mqttClient, Connection dbConnection, AtomicReference<String> selectedBeverage) {
+        try {
+            int price = fetchBeveragePrice(dbConnection, selectedBeverage.get());
+            mqttClient.publish("bank/request", new MqttMessage(String.valueOf(price).getBytes()));
         } catch (SQLException | MqttException e) {
             System.err.println("Errore durante l'elaborazione della bevanda: " + e.getMessage());
         }
