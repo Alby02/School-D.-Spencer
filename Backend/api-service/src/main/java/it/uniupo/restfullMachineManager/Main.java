@@ -446,20 +446,26 @@ public class Main {
 
         //ricevo messaggio mqtt dell'assistance per la cassa
         mqttRemoteClient.subscribe("service/assistance/cassa", (topic, message) -> {
-            System.out.println("Assistenza richiesta: " + new String(message.getPayload()) + " su topic " + topic);
+            try {
+                System.out.println("Assistenza richiesta: " + new String(message.getPayload()) + " su topic " + topic);
 
-            //controlla se la macchinetta esiste nella tabella "macchinette"
-            PreparedStatement pstmt = databaseConnection.prepareStatement("SELECT COUNT(*) FROM macchinette WHERE id = ?");
-            pstmt.setInt(1, Integer.parseInt(new String(message.getPayload())));
-
-            //se esiste inserisci un messaggio di errore nel database
-            if (pstmt.executeQuery().getInt(1) == 1) {
-                pstmt = databaseConnection.prepareStatement("UPDATE macchinette SET cassa_piena = ? WHERE id = ?");
-                pstmt.setBoolean(1, true);
-                pstmt.setString(2, new String(message.getPayload()));
-                pstmt.executeUpdate();
-            } else{
-                System.out.println("Macchinetta non trovata");
+                //controlla se la macchinetta esiste nella tabella "macchinette"
+                PreparedStatement pstmt = databaseConnection.prepareStatement("SELECT COUNT(*) FROM macchinette WHERE id = ?");
+                pstmt.setString(1, new String(message.getPayload()));
+                ResultSet set = pstmt.executeQuery();
+                set.next();
+                //se esiste inserisci un messaggio di errore nel database
+                if (set.getInt(1) == 1) {
+                    pstmt = databaseConnection.prepareStatement("UPDATE macchinette SET cassa_piena = ? WHERE id = ?");
+                    pstmt.setBoolean(1, true);
+                    pstmt.setString(2, new String(message.getPayload()));
+                    pstmt.executeUpdate();
+                } else {
+                    System.out.println("Macchinetta non trovata");
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new RuntimeException(e);
             }
         });
 
@@ -469,10 +475,11 @@ public class Main {
 
             //controlla se la macchinetta esiste nella tabella "macchinette"
             PreparedStatement pstmt = databaseConnection.prepareStatement("SELECT COUNT(*) FROM macchinette WHERE id = ?");
-            pstmt.setInt(1, Integer.parseInt(new String(message.getPayload())));
-
+            pstmt.setString(1, new String(message.getPayload()));
+            ResultSet set = pstmt.executeQuery();
+            set.next();
             //se esiste inserisci un messaggio di errore nel database
-            if (pstmt.executeQuery().getInt(1) == 1) {
+            if (set.getInt(1) == 1) {
                 pstmt = databaseConnection.prepareStatement("UPDATE macchinette SET no_resto = ? WHERE id = ?");
                 pstmt.setBoolean(1, true);
                 pstmt.setString(2, new String(message.getPayload()));
@@ -495,8 +502,8 @@ public class Main {
             statement.executeUpdate();
 
             PreparedStatement pstmt = databaseConnection.prepareStatement("UPDATE macchinette SET guadagno = guadagno + ? WHERE id = ? ");
-            pstmt.setString(1, parts[0]);
-            pstmt.setInt(2, Integer.parseInt(parts[1]));
+            pstmt.setInt(1, Integer.parseInt(parts[1]));
+            pstmt.setString(2, parts[0]);
             pstmt.executeUpdate();
 
             PreparedStatement statement1 = databaseConnection.prepareStatement("UPDATE universita SET guadagno = guadagno + ? WHERE id = (SELECT id_uni FROM macchinette WHERE id = ?)");
@@ -512,10 +519,11 @@ public class Main {
 
             //controlla se la macchinetta esiste nella tabella "macchinette"
             PreparedStatement pstmt = databaseConnection.prepareStatement("SELECT COUNT(*) FROM macchinette WHERE id = ?");
-            pstmt.setInt(1, Integer.parseInt(new String(message.getPayload())));
-
+            pstmt.setString(1, new String(message.getPayload()));
+            ResultSet set = pstmt.executeQuery();
+            set.next();
             //se esiste inserisci un messaggio di errore nel database
-            if (pstmt.executeQuery().getInt(1) == 1) {
+            if (set.getInt(1) == 1) {
                 pstmt = databaseConnection.prepareStatement("UPDATE macchinette SET no_cialde = ? WHERE id = ?");
                 pstmt.setBoolean(1, true);
                 pstmt.setString(2, new String(message.getPayload()));
@@ -531,10 +539,11 @@ public class Main {
 
             //controlla se la macchinetta esiste nella tabella "macchinette"
             PreparedStatement pstmt = databaseConnection.prepareStatement("SELECT COUNT(*) FROM macchinette WHERE id = ?");
-            pstmt.setInt(1, Integer.parseInt(new String(message.getPayload())));
-
+            pstmt.setString(1, new String(message.getPayload()));
+            ResultSet set = pstmt.executeQuery();
+            set.next();
             //se esiste inserisci un messaggio di errore nel database
-            if (pstmt.executeQuery().getInt(1) == 1) {
+            if (set.getInt(1) == 1) {
                 pstmt = databaseConnection.prepareStatement("UPDATE macchinette SET rotta = ? WHERE id = ?");
                 pstmt.setBoolean(1, true);
                 pstmt.setString(2, new String(message.getPayload()));
