@@ -31,7 +31,7 @@ function displayUniversita(Universities) {
             <div class="album-info-long">
                 <h5>${uni.nome}</h5>
                 <button class="macchinetteButton" data-id="${uni.id}">Apri Macchinette</button>
-                <button class="aggiungiCancButton" onclick="removeUniversita('${uni.id}')">Rimuovi</button>
+                ${roles.includes("admin") ? `<button class="aggiungiCancButton" onclick="removeUniversita('${uni.id}')">Rimuovi</button>` : ""}
             </div>
         `;
 
@@ -39,16 +39,18 @@ function displayUniversita(Universities) {
         supportContainer.appendChild(albumCol);
     });
 
-    const addUniButton = document.createElement('div');
-    addUniButton.classList.add('col-12', 'col-sm-4', 'col-md-3', 'col-lg-2', 'single-album-item', 'dynamic');
-    addUniButton.innerHTML = `
-        <div class="university-item">
-            <div class="album-info">
-                <button class="aggiungiCancButton" onclick="showAddUniversitaForm('id')">Aggiungi Università</button>
+    if (roles.includes("admin")) {
+        const addUniButton = document.createElement('div');
+        addUniButton.classList.add('col-12', 'col-sm-4', 'col-md-3', 'col-lg-2', 'single-album-item', 'dynamic');
+        addUniButton.innerHTML = `
+            <div class="university-item">
+                <div class="album-info">
+                    <button class="aggiungiCancButton" onclick="showAddUniversitaForm('id')">Aggiungi Università</button>
+                </div>
             </div>
-        </div>
-    `;
-    supportContainer.appendChild(addUniButton);
+        `;
+        supportContainer.appendChild(addUniButton);
+    }
 }
 
 function showAddUniversitaForm() {

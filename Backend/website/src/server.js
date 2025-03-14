@@ -81,20 +81,25 @@ async function refreshAccessToken(user) {
 }
 
 //middleware per assicurare che l'utente è autenticato e il token è aggiornato
-async function ensureAuthenticated(req, res, next) {
-    if (!req.isAuthenticated()) {
-        return res.status(401).json({ message: 'Not authenticated, please log in' });
-    }
-
-    try {
-        // Check if access token is expired
-        if (Date.now() >= req.user.expiresAt) {
-            console.log("Access token expired, refreshing...");
-            await refreshAccessToken(req.user);
+function makeAuthetication(redirect = false){
+    return async function ensureAuthenticated(req, res, next) {
+        if (!req.isAuthenticated()) {
+            if(!redirect)
+                return res.status(401).json({ message: 'Not authenticated, please log in' });
+            else
+                return res.redirect("/login");
         }
-        next();
-    } catch (error) {
-        return res.status(401).json({ message: 'Failed to refresh access token, please log in again' });
+
+        try {
+            // Check if access token is expired
+            if (Date.now() >= req.user.expiresAt) {
+                console.log("Access token expired, refreshing...");
+                await refreshAccessToken(req.user);
+            }
+            next();
+        } catch (error) {
+            return res.status(401).json({ message: 'Failed to refresh access token, please log in again' });
+        }
     }
 }
 
@@ -121,26 +126,20 @@ app.get('/auth/callback', passport.authenticate('openidconnect', {
 
 // Routes
 app.get('/', (req, res) => {
-    res.render('home');
+    res.render('home', { logout: req.isAuthenticated() });
 });
 
-app.get('/home', (req, res) => {
-    res.render('home');
+app.get('/supportUni', makeAuthetication(true), (req, res) => {
+    res.render('supportUni', { roles: jwt.decode(req.user.accessToken).realm_access.roles });
 });
 
-app.get('/supportUni', ensureAuthenticated, (req, res) => {
-    const decodedJWT = jwt.decode(req.user.accessToken)
-    res.render('supportUni', { roles: decodedJWT.realm_access.roles });
-});
-
-app.get('/supportMacchinette', ensureAuthenticated, (req, res) => {
-    const decodedJWT = jwt.decode(req.user.accessToken)
-    res.render('supportMacchinette', { roles: decodedJWT.realm_access.roles });
+app.get('/supportMacchinette', makeAuthetication(true), (req, res) => {
+    res.render('supportMacchinette', { roles: jwt.decode(req.user.accessToken).realm_access.roles });
 });
 
 // api proxy routes use axios to forward the request to the API using caCert to validate 
 // the server certificate and req.user.accessToken to authorize the request
-app.all('/api/*', ensureAuthenticated, async (req, res) => {
+app.all('/api/*', makeAuthetication(false), async (req, res) => {
     try {
         const url = process.env.API_URL + req.url.replace('/api', '');
         const response = await axios({

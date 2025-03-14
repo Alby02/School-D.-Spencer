@@ -32,7 +32,6 @@ function displayMacchinette(macchinette, idUni) {
         const uniElement = document.createElement("div");
         uniElement.classList.add("university-item");
 
-        console.log("Dati ricevuti:", macchinetta);
         uniElement.innerHTML = `
             <div class="album-info-long">
                 <h5>${macchinetta.nome}</h5>
@@ -44,23 +43,25 @@ function displayMacchinette(macchinette, idUni) {
                 ${macchinetta.no_cialde === "true" ? `<button class="aggiungiCancButton" onclick="resolveCialde('${macchinetta.id}')">Assistenza Cialde</button>` : ''}
                 <h5>Manutenzione Guasto: ${macchinetta.rotta === "true" ? 'Sì' : 'No'}</h5>
                 ${macchinetta.rotta === "true" ? `<button class="aggiungiCancButton" onclick="resolveGuasto('${macchinetta.id}')">Assistenza Guasto</button>` : ''}
-                <button class="aggiungiCancButton" onclick="removeMacchinetta('${macchinetta.id}')">Rimuovi</button>
+                ${roles.includes("admin") ? `<button class="aggiungiCancButton" onclick="removeMacchinetta('${macchinetta.id}')">Rimuovi</button>` : ""}
             </div>
         `;
         albumCol.appendChild(uniElement);
         supportContainer.appendChild(albumCol);
     });
 
-    const addMacchinettaButton = document.createElement('div');
-    addMacchinettaButton.classList.add('col-12', 'col-sm-4', 'col-md-3', 'col-lg-2', 'single-album-item', 'dynamic');
-    addMacchinettaButton.innerHTML = `
-        <div class="university-item">
-            <div class="album-info">
-                <button class="aggiungiCancButton" onclick="showAddMacchinettaForm('${idUni}')">Aggiungi Macchinetta</button>
+    if (roles.includes("admin")) {
+        const addMacchinettaButton = document.createElement('div');
+        addMacchinettaButton.classList.add('col-12', 'col-sm-4', 'col-md-3', 'col-lg-2', 'single-album-item', 'dynamic');
+        addMacchinettaButton.innerHTML = `
+            <div class="university-item">
+                <div class="album-info">
+                    <button class="aggiungiCancButton" onclick="showAddMacchinettaForm('${idUni}')">Aggiungi Macchinetta</button>
+                </div>
             </div>
-        </div>
-    `;
-    supportContainer.appendChild(addMacchinettaButton);
+        `;
+        supportContainer.appendChild(addMacchinettaButton);
+    }
 }
 
 function showAddMacchinettaForm(idUni) {
@@ -164,7 +165,7 @@ function removeMacchinetta(idMacchinetta) {
     });
 }
 
-//Aggiorna resto database
+//Aggiorna Resto database
 function resolveResto(idMacchinetta) {
     fetch("https://localhost/api/assistenza/resto", {
         method: "POST",
