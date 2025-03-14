@@ -35,6 +35,7 @@ function displayMacchinette(macchinette, idUni) {
         uniElement.innerHTML = `
             <div class="album-info-long">
                 <h5>${macchinetta.nome}</h5>
+                <h5>Guadagno Macchinetta: ${macchinetta.guadagno}</h5>
                 <h5>Manutenzione Resto: ${macchinetta.no_resto === "true" ? 'Sì' : 'No'}</h5>
                 ${macchinetta.no_resto === "true" ? `<button class="aggiungiCancButton" onclick="resolveResto('${macchinetta.id}')">Assistenza Resto</button>` : ''}
                 <h5>Manutenzione Cassa: ${macchinetta.cassa_piena === "true" ? 'Sì' : 'No'}</h5>

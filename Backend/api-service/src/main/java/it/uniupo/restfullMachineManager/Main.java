@@ -92,6 +92,7 @@ public class Main {
                     HashMap<String, String> uni = new HashMap<>();
                     uni.put("id", rs.getInt("id") + "");
                     uni.put("nome", rs.getString("nome"));
+                    uni.put("guadagno", rs.getInt("guadagno") + "");
                     universita.add(uni);
                 }
                 return new Gson().toJson(universita);
@@ -193,6 +194,7 @@ public class Main {
                     macchinetta.put("id", rs.getString("id"));
                     macchinetta.put("id_uni", rs.getInt("id_uni") + "");
                     macchinetta.put("nome", rs.getString("nome"));
+                    macchinetta.put("guadagno", rs.getInt("guadagno") + "");
                     macchinetta.put("no_resto", rs.getBoolean("no_resto")+ "");
                     macchinetta.put("cassa_piena", rs.getBoolean("cassa_piena")+ "");
                     macchinetta.put("no_cialde", rs.getBoolean("no_cialde")+ "");

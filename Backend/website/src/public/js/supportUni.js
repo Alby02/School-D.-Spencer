@@ -30,6 +30,7 @@ function displayUniversita(Universities) {
         uniElement.innerHTML = `
             <div class="album-info-long">
                 <h5>${uni.nome}</h5>
+                <h5>Guadagno Università: ${uni.guadagno}</h5>
                 <button class="macchinetteButton" data-id="${uni.id}">Apri Macchinette</button>
                 ${roles.includes("admin") ? `<button class="aggiungiCancButton" onclick="removeUniversita('${uni.id}')">Rimuovi</button>` : ""}
             </div>
