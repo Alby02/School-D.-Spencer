@@ -13,6 +13,12 @@ The system includes backend services, a frontend interface, and integration with
 - Interaction between backend services and university-registered machines.
 - Deployment and testing scripts for easy setup.
 
+## Requirements
+
+To run this project, make sure you have the following installed:
+- **OpenSSL (full version)**
+- **Docker**
+
 ## Project Structure
 
 ```
