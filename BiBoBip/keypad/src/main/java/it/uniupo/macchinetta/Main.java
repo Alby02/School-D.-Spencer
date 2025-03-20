@@ -69,7 +69,7 @@ public class Main {
                 double prezzo = recuperaPrezzoBevanda(databaseConnection, idBevanda);
 
                 if (prezzo >= 0) {
-                    System.out.println("Il prezzo della bevanda selezionata è: " + prezzo + "€");
+                    System.out.println("Il prezzo della bevanda selezionata è: " + ((int)prezzo/100) + "." + ((int)prezzo%100) + "€");
                     inviaMessaggioMqtt(mqttClient, idBevanda);
                 } else {
                     System.out.println("Errore: prezzo della bevanda non trovato.");

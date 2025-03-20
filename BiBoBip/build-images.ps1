@@ -17,7 +17,7 @@ if ($compileChoice -eq "all") {
 	# Check if the folder is valid
 	if ($specificFolder -in @("assistance", "bank", "issuer", "keypad", "manager")) {
 		Write-Host "Building Docker image in folder: $specificFolder"
-		docker build -t "$specificFolder-local" .\$specificFolder
+		docker build -t "$specificFolder" .\$specificFolder
 	} else {
 		Write-Host "Invalid folder name. Skipping the build."
 	}

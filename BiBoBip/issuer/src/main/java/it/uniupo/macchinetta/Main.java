@@ -252,10 +252,12 @@ public class Main {
                                 int quantitaDisponibile = cialdaResult.getInt("quantita");
                                 if (quantitaDisponibile < quantitaRichiesta) {
                                     mqttClient.publish("assistance/cialde", new MqttMessage("Errore".getBytes()));
+                                    System.out.println("Invio messaggio assistenza per cialde");
                                     return false; // Cialde insufficienti
                                 }
                             } else {
                                 mqttClient.publish("assistance/cialde", new MqttMessage("Errore".getBytes()));
+                                System.out.println("Invio messaggio assistenza per cialde");
                                 return false; // Cialda non trovata
                             }
                         }
